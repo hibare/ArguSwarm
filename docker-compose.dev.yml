@@ -1,0 +1,21 @@
+services:
+  overseer:
+    image: cosmtrek/air
+    container_name: overseer
+    hostname: overseer
+    working_dir: /app
+    command: -c .air/overseer.air.toml
+    volumes:
+      - ./:/app
+    network_mode: host
+
+  scout:
+    image: cosmtrek/air
+    container_name: scout
+    hostname: scout
+    working_dir: /app
+    command: -c .air/scout.air.toml
+    volumes:
+      - ./:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host

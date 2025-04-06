@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "00:30"
+    target-branch: "main"
+    assignees:
+      - "hibare"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Maintain dependencies for Go mods
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "00:30"
+    target-branch: "main"
+    assignees:
+      - "hibare"
+    allow:
+      # Allow only direct updates for
+      - dependency-type: "direct"
+    groups:
+      go:
+        patterns:
+          - "*"
+
+  # Maintain version for Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "00:30"
+    target-branch: "main"
+    assignees:
+      - "hibare"
+    groups:
+      docker:
+        patterns:
+          - "*"

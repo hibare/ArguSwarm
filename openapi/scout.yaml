@@ -1,0 +1,229 @@
+openapi: 3.0.0
+info:
+  title: Scout API
+  version: 1.0.0
+  description: API for Docker container monitoring scout
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+components:
+  securitySchemes:
+    SharedSecretAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Shared secret authentication using Authorization header
+
+security:
+  - SharedSecretAuth: []
+
+paths:
+  /ping:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns 200 OK if the service is healthy
+      responses:
+        "200":
+          description: Service is healthy
+
+  /api/v1/containers:
+    get:
+      tags:
+        - Docker Resources
+      summary: Get all containers
+      description: Returns a list of all containers on the host
+      security:
+        - SharedSecretAuth: []
+      responses:
+        "200":
+          description: List of containers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    Id:
+                      type: string
+                    Names:
+                      type: array
+                      items:
+                        type: string
+                    Image:
+                      type: string
+                    Status:
+                      type: string
+                    State:
+                      type: string
+                    Created:
+                      type: integer
+                    Ports:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          IP:
+                            type: string
+                          PrivatePort:
+                            type: integer
+                          PublicPort:
+                            type: integer
+                          Type:
+                            type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/images:
+    get:
+      tags:
+        - Docker Resources
+      summary: Get all images
+      description: Returns a list of all Docker images on the host
+      security:
+        - SharedSecretAuth: []
+      responses:
+        "200":
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    Id:
+                      type: string
+                    ParentId:
+                      type: string
+                    RepoTags:
+                      type: array
+                      items:
+                        type: string
+                    Created:
+                      type: integer
+                    Size:
+                      type: integer
+                    VirtualSize:
+                      type: integer
+                    Labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/networks:
+    get:
+      tags:
+        - Docker Resources
+      summary: Get all networks
+      description: Returns a list of all Docker networks
+      security:
+        - SharedSecretAuth: []
+      responses:
+        "200":
+          description: List of networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    Name:
+                      type: string
+                    Id:
+                      type: string
+                    Created:
+                      type: string
+                    Scope:
+                      type: string
+                    Driver:
+                      type: string
+                    EnableIPv6:
+                      type: boolean
+                    IPAM:
+                      type: object
+                      properties:
+                        Driver:
+                          type: string
+                        Config:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              Subnet:
+                                type: string
+                              Gateway:
+                                type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/volumes:
+    get:
+      tags:
+        - Docker Resources
+      summary: Get all volumes
+      description: Returns a list of all Docker volumes
+      security:
+        - SharedSecretAuth: []
+      responses:
+        "200":
+          description: List of volumes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Volumes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        Name:
+                          type: string
+                        Driver:
+                          type: string
+                        Mountpoint:
+                          type: string
+                        CreatedAt:
+                          type: string
+                        Labels:
+                          type: object
+                          additionalProperties:
+                            type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
