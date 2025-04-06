@@ -3,7 +3,7 @@ module github.com/hibare/ArguSwarm
 go 1.24.2
 
 require (
-	github.com/docker/docker v28.0.2+incompatible
+	github.com/docker/docker v28.0.4+incompatible
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/hibare/GoCommon/v2 v2.21.0
 	github.com/spf13/cobra v1.9.1
