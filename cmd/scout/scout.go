@@ -22,6 +22,7 @@ import (
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/node"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
+	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
 
 // Agent represents a network scout agent.
@@ -79,6 +80,9 @@ func (s *Agent) Start() error {
 	router.Use(middleware.Heartbeat(constants.PingPath))
 
 	router.Route("/api/v1", func(r chi.Router) {
+		r.Use(func(next http.Handler) http.Handler {
+			return commonMiddleware.TokenAuth(next, []string{config.Current.Server.SharedSecret})
+		})
 		r.Get("/containers", s.handleContainers)
 		r.Get("/images", s.handleImages)
 		r.Get("/networks", s.handleNetworks)
@@ -201,6 +205,8 @@ func (s *Agent) sendHealthCheck() error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(commonMiddleware.AuthHeaderName, config.Current.Server.SharedSecret)
+
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		slog.ErrorContext(s.context, "Error sending health check", "error", err)

@@ -44,7 +44,7 @@ const (
 // API endpoint paths.
 const (
 	// PingPath is the endpoint for health check pings.
-	PingPath = "/api/v1/ping"
+	PingPath = "/ping"
 )
 
 // Container state constants.

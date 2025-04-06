@@ -22,6 +22,7 @@ import (
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/utils"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
+	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
 
 // Overseer manages the health and status of scout agents.
@@ -61,14 +62,25 @@ func (o *Overseer) Start() error {
 	router.Use(middleware.Heartbeat(constants.PingPath))
 
 	router.Route("/api/v1", func(r chi.Router) {
-		r.Post("/scouts/ping", o.handleScoutPing)
-		r.Get("/scouts", o.handleListScouts)
-		r.Get("/scouts/active", o.handleActiveScouts)
-		r.Get("/containers", o.handleContainers)
-		r.Get("/images", o.handleImages)
-		r.Get("/networks", o.handleNetworks)
-		r.Get("/volumes", o.handleVolumes)
-		r.Get("/container/{name}/healthy", o.handleContainerHealth)
+		// Add shared secret auth middleware only for /scouts/ping
+		r.With(func(next http.Handler) http.Handler {
+			return commonMiddleware.TokenAuth(next, []string{config.Current.Server.SharedSecret})
+		}).Post("/scouts/ping", o.handleScoutPing)
+
+		// Add token auth middleware for all other routes
+		r.Group(func(r chi.Router) {
+			r.Use(func(next http.Handler) http.Handler {
+				return commonMiddleware.TokenAuth(next, config.Current.Overseer.AuthTokens)
+			})
+
+			r.Get("/scouts", o.handleListScouts)
+			r.Get("/scouts/active", o.handleActiveScouts)
+			r.Get("/containers", o.handleContainers)
+			r.Get("/images", o.handleImages)
+			r.Get("/networks", o.handleNetworks)
+			r.Get("/volumes", o.handleVolumes)
+			r.Get("/container/{name}/healthy", o.handleContainerHealth)
+		})
 	})
 
 	srvAddr := fmt.Sprintf(":%d", constants.DefaultOverseerPort)
@@ -129,6 +141,10 @@ func (o *Overseer) fetchResource(s *Scout, resourceType string) ([]any, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Add Authorization header
+	req.Header.Set(commonMiddleware.AuthHeaderName, config.Current.Server.SharedSecret)
+
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -162,6 +178,7 @@ func (o *Overseer) handleScoutPing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.scoutStore.UpdateScout(status.NodeID, host)
+	slog.InfoContext(o.context, "Scout ping received", "node_id", status.NodeID, "address", host)
 	w.WriteHeader(http.StatusOK)
 }
 

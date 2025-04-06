@@ -8,11 +8,36 @@ servers:
   - url: http://localhost:8081
     description: Local development server
 
+components:
+  securitySchemes:
+    SharedSecretAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Shared secret authentication using Authorization header
+
+security:
+  - SharedSecretAuth: []
+
 paths:
+  /ping:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns 200 OK if the service is healthy
+      responses:
+        "200":
+          description: Service is healthy
+
   /api/v1/containers:
     get:
+      tags:
+        - Docker Resources
       summary: Get all containers
       description: Returns a list of all containers on the host
+      security:
+        - SharedSecretAuth: []
       responses:
         "200":
           description: List of containers
@@ -62,8 +87,12 @@ paths:
 
   /api/v1/images:
     get:
+      tags:
+        - Docker Resources
       summary: Get all images
       description: Returns a list of all Docker images on the host
+      security:
+        - SharedSecretAuth: []
       responses:
         "200":
           description: List of images
@@ -104,8 +133,12 @@ paths:
 
   /api/v1/networks:
     get:
+      tags:
+        - Docker Resources
       summary: Get all networks
       description: Returns a list of all Docker networks
+      security:
+        - SharedSecretAuth: []
       responses:
         "200":
           description: List of networks
@@ -154,8 +187,12 @@ paths:
 
   /api/v1/volumes:
     get:
+      tags:
+        - Docker Resources
       summary: Get all volumes
       description: Returns a list of all Docker volumes
+      security:
+        - SharedSecretAuth: []
       responses:
         "200":
           description: List of volumes

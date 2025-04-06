@@ -19,15 +19,18 @@ func TestLoad(t *testing.T) {
 		expected *Config
 	}{
 		{
-			name:    "all defaults",
-			envVars: map[string]string{},
+			name: "all defaults",
+			envVars: map[string]string{
+				"ARGUSWARM_SERVER_SHARED_SECRET": "test-secret",
+			},
 			expected: &Config{
 				Scout: ScoutConfig{
 					OverseerServerAddress: "",
 					Port:                  constants.DefaultScoutPort,
 				},
 				Overseer: OverseerConfig{
-					Port: constants.DefaultOverseerPort,
+					Port:       constants.DefaultOverseerPort,
+					AuthTokens: []string{},
 				},
 				Logger: LoggerConfig{
 					Level: commonLogger.DefaultLoggerLevel,
@@ -37,6 +40,7 @@ func TestLoad(t *testing.T) {
 					ReadTimeout:  constants.DefaultServerReadTimeout,
 					WriteTimeout: constants.DefaultServerWriteTimeout,
 					IdleTimeout:  constants.DefaultServerIdleTimeout,
+					SharedSecret: "test-secret",
 				},
 				HTTPClient: HTTPClientConfig{
 					Timeout: constants.DefaultHTTPClientTimeout,
@@ -55,6 +59,8 @@ func TestLoad(t *testing.T) {
 				"ARGUSWARM_SERVER_WRITE_TIMEOUT":    "20s",
 				"ARGUSWARM_SERVER_IDLE_TIMEOUT":     "30s",
 				"ARGUSWARM_HTTP_CLIENT_TIMEOUT":     "5s",
+				"ARGUSWARM_OVERSEER_AUTH_TOKENS":    "token1,token2,token3",
+				"ARGUSWARM_SERVER_SHARED_SECRET":    "test-secret",
 			},
 			expected: &Config{
 				Scout: ScoutConfig{
@@ -62,7 +68,8 @@ func TestLoad(t *testing.T) {
 					Port:                  9090,
 				},
 				Overseer: OverseerConfig{
-					Port: 8080,
+					Port:       8080,
+					AuthTokens: []string{"token1", "token2", "token3"},
 				},
 				Logger: LoggerConfig{
 					Level: "debug",
@@ -72,6 +79,7 @@ func TestLoad(t *testing.T) {
 					ReadTimeout:  10 * time.Second,
 					WriteTimeout: 20 * time.Second,
 					IdleTimeout:  30 * time.Second,
+					SharedSecret: "test-secret",
 				},
 				HTTPClient: HTTPClientConfig{
 					Timeout: 5 * time.Second,
@@ -127,6 +135,24 @@ func TestLoad_InvalidLogMode(t *testing.T) {
 		return
 	}
 	const testName = "TestLoad_InvalidLogMode"
+	// #nosec G204
+	cmd := exec.Command(os.Args[0], "-test.run=^"+testName+"$")
+	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
+	err := cmd.Run()
+	var e *exec.ExitError
+	if errors.As(err, &e) && !e.Success() {
+		return
+	}
+	t.Fatalf("process ran with err %v, want exit status 1", err)
+}
+
+func TestLoad_MissingSharedSecret(t *testing.T) {
+	// Test that Load exits when shared secret is not set
+	if os.Getenv("TEST_EXIT") == "1" {
+		Load()
+		return
+	}
+	const testName = "TestLoad_MissingSharedSecret"
 	// #nosec G204
 	cmd := exec.Command(os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")

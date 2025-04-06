@@ -8,11 +8,41 @@ servers:
   - url: http://localhost:8080
     description: Local development server
 
+components:
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication using Authorization header
+    SharedSecretAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Shared secret authentication using Authorization header
+
+security:
+  - TokenAuth: []
+
 paths:
+  /ping:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns 200 OK if the service is healthy
+      responses:
+        "200":
+          description: Service is healthy
+
   /api/v1/scouts/ping:
     post:
+      tags:
+        - Scouts
       summary: Register or update scout health
       description: Register a new scout or update health status of existing scout
+      security:
+        - SharedSecretAuth: []
       requestBody:
         required: true
         content:
@@ -28,10 +58,8 @@ paths:
                 node_id:
                   type: string
       responses:
-        "201":
-          description: New scout registered
         "200":
-          description: Scout health updated
+          description: Scout health updated successfully
         "400":
           description: Bad request
           content:
@@ -44,6 +72,8 @@ paths:
 
   /api/v1/scouts:
     get:
+      tags:
+        - Scouts
       summary: List all scouts
       description: Returns a list of all registered scouts
       responses:
@@ -68,6 +98,8 @@ paths:
 
   /api/v1/scouts/active:
     get:
+      tags:
+        - Scouts
       summary: List active scouts
       description: Returns a list of all active scouts
       responses:
@@ -101,6 +133,8 @@ paths:
 
   /api/v1/containers:
     get:
+      tags:
+        - Docker Resources
       summary: Get all containers from all scouts
       description: Returns aggregated list of containers from all active scouts
       responses:
@@ -113,42 +147,35 @@ paths:
                 items:
                   type: object
                   properties:
-                    scout_id:
+                    Id:
                       type: string
-                    containers:
+                    Names:
+                      type: array
+                      items:
+                        type: string
+                    Image:
+                      type: string
+                    Status:
+                      type: string
+                    State:
+                      type: string
+                    Created:
+                      type: integer
+                    Ports:
                       type: array
                       items:
                         type: object
                         properties:
-                          Id:
+                          IP:
                             type: string
-                          Names:
-                            type: array
-                            items:
-                              type: string
-                          Image:
-                            type: string
-                          Status:
-                            type: string
-                          State:
-                            type: string
-                          Created:
+                          PrivatePort:
                             type: integer
-                          Ports:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                IP:
-                                  type: string
-                                PrivatePort:
-                                  type: integer
-                                PublicPort:
-                                  type: integer
-                                Type:
-                                  type: string
-        "500":
-          description: Internal server error
+                          PublicPort:
+                            type: integer
+                          Type:
+                            type: string
+        "503":
+          description: Service Unavailable
           content:
             application/json:
               schema:
@@ -159,6 +186,8 @@ paths:
 
   /api/v1/images:
     get:
+      tags:
+        - Docker Resources
       summary: Get all images from all scouts
       description: Returns aggregated list of images from all active scouts
       responses:
@@ -171,33 +200,26 @@ paths:
                 items:
                   type: object
                   properties:
-                    scout_id:
+                    Id:
                       type: string
-                    images:
+                    ParentId:
+                      type: string
+                    RepoTags:
                       type: array
                       items:
-                        type: object
-                        properties:
-                          Id:
-                            type: string
-                          ParentId:
-                            type: string
-                          RepoTags:
-                            type: array
-                            items:
-                              type: string
-                          Created:
-                            type: integer
-                          Size:
-                            type: integer
-                          VirtualSize:
-                            type: integer
-                          Labels:
-                            type: object
-                            additionalProperties:
-                              type: string
-        "500":
-          description: Internal server error
+                        type: string
+                    Created:
+                      type: integer
+                    Size:
+                      type: integer
+                    VirtualSize:
+                      type: integer
+                    Labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+        "503":
+          description: Service Unavailable
           content:
             application/json:
               schema:
@@ -208,6 +230,8 @@ paths:
 
   /api/v1/networks:
     get:
+      tags:
+        - Docker Resources
       summary: Get all networks from all scouts
       description: Returns aggregated list of networks from all active scouts
       responses:
@@ -220,41 +244,34 @@ paths:
                 items:
                   type: object
                   properties:
-                    scout_id:
+                    Name:
                       type: string
-                    networks:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          Name:
-                            type: string
-                          Id:
-                            type: string
-                          Created:
-                            type: string
-                          Scope:
-                            type: string
-                          Driver:
-                            type: string
-                          EnableIPv6:
-                            type: boolean
-                          IPAM:
+                    Id:
+                      type: string
+                    Created:
+                      type: string
+                    Scope:
+                      type: string
+                    Driver:
+                      type: string
+                    EnableIPv6:
+                      type: boolean
+                    IPAM:
+                      type: object
+                      properties:
+                        Driver:
+                          type: string
+                        Config:
+                          type: array
+                          items:
                             type: object
                             properties:
-                              Driver:
+                              Subnet:
                                 type: string
-                              Config:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    Subnet:
-                                      type: string
-                                    Gateway:
-                                      type: string
-        "500":
-          description: Internal server error
+                              Gateway:
+                                type: string
+        "503":
+          description: Service Unavailable
           content:
             application/json:
               schema:
@@ -265,6 +282,8 @@ paths:
 
   /api/v1/volumes:
     get:
+      tags:
+        - Docker Resources
       summary: Get all volumes from all scouts
       description: Returns aggregated list of volumes from all active scouts
       responses:
@@ -277,30 +296,20 @@ paths:
                 items:
                   type: object
                   properties:
-                    scout_id:
+                    Name:
                       type: string
-                    volumes:
+                    Driver:
+                      type: string
+                    Mountpoint:
+                      type: string
+                    CreatedAt:
+                      type: string
+                    Labels:
                       type: object
-                      properties:
-                        Volumes:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              Name:
-                                type: string
-                              Driver:
-                                type: string
-                              Mountpoint:
-                                type: string
-                              CreatedAt:
-                                type: string
-                              Labels:
-                                type: object
-                                additionalProperties:
-                                  type: string
-        "500":
-          description: Internal server error
+                      additionalProperties:
+                        type: string
+        "503":
+          description: Service Unavailable
           content:
             application/json:
               schema:
@@ -311,6 +320,8 @@ paths:
 
   /api/v1/container/{name}/healthy:
     get:
+      tags:
+        - Docker Resources
       summary: Check container health
       description: Checks if a specific container is healthy (running) across all scouts
       parameters:
@@ -323,7 +334,14 @@ paths:
         "200":
           description: Container is healthy (running)
         "404":
-          description: Container not found or not running
+          description: Container not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
         "503":
           description: Service Unavailable
           content:
