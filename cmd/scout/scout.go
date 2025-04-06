@@ -211,7 +211,7 @@ func (s *Agent) sendHealthCheck() error {
 	}
 	slog.DebugContext(s.context, "Pinged overseer", "node_id", s.nodeID, "status", resp.StatusCode)
 	if resp.StatusCode == http.StatusOK {
-		slog.InfoContext(s.context, "Scout registered", "node_id", s.nodeID)
+		slog.InfoContext(s.context, "Ping successful", "node_id", s.nodeID)
 	} else {
 		slog.ErrorContext(s.context, "Unexpected status code", "status_code", resp.StatusCode)
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
