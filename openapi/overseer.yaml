@@ -1,0 +1,335 @@
+openapi: 3.0.0
+info:
+  title: Overseer API
+  version: 1.0.0
+  description: API for Docker container monitoring overseer
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/scouts/ping:
+    post:
+      summary: Register or update scout health
+      description: Register a new scout or update health status of existing scout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+                node_id:
+                  type: string
+      responses:
+        "201":
+          description: New scout registered
+        "200":
+          description: Scout health updated
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/scouts:
+    get:
+      summary: List all scouts
+      description: Returns a list of all registered scouts
+      responses:
+        "200":
+          description: List of scouts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    node_id:
+                      type: string
+                    last_seen:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                    address:
+                      type: string
+
+  /api/v1/scouts/active:
+    get:
+      summary: List active scouts
+      description: Returns a list of all active scouts
+      responses:
+        "200":
+          description: List of active scouts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    node_id:
+                      type: string
+                    last_seen:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                    address:
+                      type: string
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/containers:
+    get:
+      summary: Get all containers from all scouts
+      description: Returns aggregated list of containers from all active scouts
+      responses:
+        "200":
+          description: Aggregated list of containers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    scout_id:
+                      type: string
+                    containers:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          Id:
+                            type: string
+                          Names:
+                            type: array
+                            items:
+                              type: string
+                          Image:
+                            type: string
+                          Status:
+                            type: string
+                          State:
+                            type: string
+                          Created:
+                            type: integer
+                          Ports:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                IP:
+                                  type: string
+                                PrivatePort:
+                                  type: integer
+                                PublicPort:
+                                  type: integer
+                                Type:
+                                  type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/images:
+    get:
+      summary: Get all images from all scouts
+      description: Returns aggregated list of images from all active scouts
+      responses:
+        "200":
+          description: Aggregated list of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    scout_id:
+                      type: string
+                    images:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          Id:
+                            type: string
+                          ParentId:
+                            type: string
+                          RepoTags:
+                            type: array
+                            items:
+                              type: string
+                          Created:
+                            type: integer
+                          Size:
+                            type: integer
+                          VirtualSize:
+                            type: integer
+                          Labels:
+                            type: object
+                            additionalProperties:
+                              type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/networks:
+    get:
+      summary: Get all networks from all scouts
+      description: Returns aggregated list of networks from all active scouts
+      responses:
+        "200":
+          description: Aggregated list of networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    scout_id:
+                      type: string
+                    networks:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          Name:
+                            type: string
+                          Id:
+                            type: string
+                          Created:
+                            type: string
+                          Scope:
+                            type: string
+                          Driver:
+                            type: string
+                          EnableIPv6:
+                            type: boolean
+                          IPAM:
+                            type: object
+                            properties:
+                              Driver:
+                                type: string
+                              Config:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    Subnet:
+                                      type: string
+                                    Gateway:
+                                      type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/volumes:
+    get:
+      summary: Get all volumes from all scouts
+      description: Returns aggregated list of volumes from all active scouts
+      responses:
+        "200":
+          description: Aggregated list of volumes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    scout_id:
+                      type: string
+                    volumes:
+                      type: object
+                      properties:
+                        Volumes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              Name:
+                                type: string
+                              Driver:
+                                type: string
+                              Mountpoint:
+                                type: string
+                              CreatedAt:
+                                type: string
+                              Labels:
+                                type: object
+                                additionalProperties:
+                                  type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/v1/container/{name}/healthy:
+    get:
+      summary: Check container health
+      description: Checks if a specific container is healthy (running) across all scouts
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Container is healthy (running)
+        "404":
+          description: Container not found or not running
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string

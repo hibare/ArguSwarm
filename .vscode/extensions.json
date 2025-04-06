@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "golang.go",
+    "ms-azuretools.vscode-docker",
+    "redhat.vscode-yaml",
+    "42crunch.vscode-openapi",
+    "mermade.openapi-lint",
+    "streetsidesoftware.code-spell-checker",
+    "DavidAnson.vscode-markdownlint",
+    "editorconfig.editorconfig",
+    "aaron-bond.better-comments",
+    "ms-vscode.go",
+    "esbenp.prettier-vscode",
+    "christian-kohler.npm-intellisense"
+  ]
+}
