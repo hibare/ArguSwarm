@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,9 +21,24 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
+	"github.com/hibare/ArguSwarm/internal/middleware/security"
 	"github.com/hibare/ArguSwarm/internal/node"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
+)
+
+var (
+	// ErrFailedToRetrieveImageInformation is an error that occurs when a resource cannot be retrieved.
+	ErrFailedToRetrieveImageInformation = errors.New("failed to retrieve image information")
+
+	// ErrFailedToRetrieveContainerInformation is an error that occurs when a resource cannot be retrieved.
+	ErrFailedToRetrieveContainerInformation = errors.New("failed to retrieve container information")
+
+	// ErrFailedToRetrieveNetworkInformation is an error that occurs when a resource cannot be retrieved.
+	ErrFailedToRetrieveNetworkInformation = errors.New("failed to retrieve network information")
+
+	// ErrFailedToRetrieveVolumeInformation is an error that occurs when a resource cannot be retrieved.
+	ErrFailedToRetrieveVolumeInformation = errors.New("failed to retrieve volume information")
 )
 
 // Agent represents a network scout agent.
@@ -43,7 +59,7 @@ type HealthStatus struct {
 
 type nodeIDKey struct{}
 
-// NewAgent creates a new Agent instance.
+// NewAgent creates a new Agent instance with secure Docker client.
 func NewAgent() (*Agent, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -66,9 +82,11 @@ func NewAgent() (*Agent, error) {
 	}, nil
 }
 
-// Start begins the agent's operation.
+// Start begins the agent's operation with enhanced security.
 func (s *Agent) Start() error {
 	router := chi.NewRouter()
+
+	// Basic middleware
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.NoCache)
@@ -78,6 +96,9 @@ func (s *Agent) Start() error {
 	router.Use(middleware.StripSlashes)
 	router.Use(middleware.CleanPath)
 	router.Use(middleware.Heartbeat(constants.PingPath))
+
+	// Use common security middleware
+	router.Use(security.BasicSecurity)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		r.Use(func(next http.Handler) http.Handler {
@@ -230,7 +251,9 @@ func (s *Agent) handleContainers(w http.ResponseWriter, _ *http.Request) {
 	ctx := context.Background()
 	containers, err := s.dockerClient.ContainerList(ctx, containerType.ListOptions{})
 	if err != nil {
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
+		slog.ErrorContext(s.context, "Failed to list containers", "error", err)
+		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
+			ErrFailedToRetrieveContainerInformation)
 		return
 	}
 	commonHttp.WriteJsonResponse(w, http.StatusOK, containers)
@@ -240,7 +263,9 @@ func (s *Agent) handleImages(w http.ResponseWriter, _ *http.Request) {
 	ctx := context.Background()
 	images, err := s.dockerClient.ImageList(ctx, imageType.ListOptions{})
 	if err != nil {
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
+		slog.ErrorContext(s.context, "Failed to list images", "error", err)
+		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
+			ErrFailedToRetrieveImageInformation)
 		return
 	}
 	commonHttp.WriteJsonResponse(w, http.StatusOK, images)
@@ -250,7 +275,9 @@ func (s *Agent) handleNetworks(w http.ResponseWriter, _ *http.Request) {
 	ctx := context.Background()
 	networks, err := s.dockerClient.NetworkList(ctx, networkType.ListOptions{})
 	if err != nil {
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
+		slog.ErrorContext(s.context, "Failed to list networks", "error", err)
+		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
+			ErrFailedToRetrieveNetworkInformation)
 		return
 	}
 	commonHttp.WriteJsonResponse(w, http.StatusOK, networks)
@@ -260,7 +287,9 @@ func (s *Agent) handlerVolumes(w http.ResponseWriter, _ *http.Request) {
 	ctx := context.Background()
 	volumes, err := s.dockerClient.VolumeList(ctx, volumeType.ListOptions{})
 	if err != nil {
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
+		slog.ErrorContext(s.context, "Failed to list volumes", "error", err)
+		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
+			ErrFailedToRetrieveVolumeInformation)
 		return
 	}
 	commonHttp.WriteJsonResponse(w, http.StatusOK, volumes.Volumes)

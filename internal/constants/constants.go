@@ -27,6 +27,9 @@ const (
 
 	// DefaultServerTimeout is the overall timeout for server operations.
 	DefaultServerTimeout = 60 * time.Second
+
+	// DefaultServerRequestSizeLimit is the maximum size of a request.
+	DefaultServerRequestSizeLimit = 1024 * 1024 // 1MB
 )
 
 // Health check and retry related constants.

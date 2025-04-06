@@ -20,9 +20,30 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
+	"github.com/hibare/ArguSwarm/internal/middleware/security"
 	"github.com/hibare/ArguSwarm/internal/utils"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
+)
+
+var (
+	// ErrFailedToCreateRequest is an error that occurs when a request cannot be created.
+	ErrFailedToCreateRequest = errors.New("failed to create request")
+
+	// ErrFailedToFetchResource is an error that occurs when a resource cannot be fetched.
+	ErrFailedToFetchResource = errors.New("failed to fetch resource")
+
+	// ErrFailedToDecodeResponse is an error that occurs when a response cannot be decoded.
+	ErrFailedToDecodeResponse = errors.New("failed to decode response")
+
+	// ErrUnexpectedStatusCode is an error that occurs when an unexpected status code is received.
+	ErrUnexpectedStatusCode = errors.New("unexpected status code")
+
+	// ErrInvalidRequestFormat is an error that occurs when a request format is invalid.
+	ErrInvalidRequestFormat = errors.New("invalid request format")
+
+	// ErrInvalidRemoteAddress is an error that occurs when a remote address is invalid.
+	ErrInvalidRemoteAddress = errors.New("invalid remote address")
 )
 
 // Overseer manages the health and status of scout agents.
@@ -51,6 +72,8 @@ func NewOverseer() (*Overseer, error) {
 // Start begins the overseer's operation.
 func (o *Overseer) Start() error {
 	router := chi.NewRouter()
+
+	// Basic middleware
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestID)
@@ -60,6 +83,9 @@ func (o *Overseer) Start() error {
 	router.Use(middleware.StripSlashes)
 	router.Use(middleware.CleanPath)
 	router.Use(middleware.Heartbeat(constants.PingPath))
+
+	// Use common security middleware
+	router.Use(security.BasicSecurity)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		// Add shared secret auth middleware only for /scouts/ping
@@ -139,15 +165,17 @@ func (o *Overseer) fetchResource(s *Scout, resourceType string) ([]any, error) {
 
 	req, err := http.NewRequestWithContext(o.context, http.MethodGet, url.String(), nil)
 	if err != nil {
-		return nil, err
+		slog.ErrorContext(o.context, "Failed to create request", "error", err)
+		return nil, ErrFailedToCreateRequest
 	}
 
-	// Add Authorization header
 	req.Header.Set(commonMiddleware.AuthHeaderName, config.Current.Server.SharedSecret)
+	req.Header.Set("User-Agent", "ArguSwarm-Overseer/1.0")
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		slog.ErrorContext(o.context, "Failed to fetch resource", "error", err)
+		return nil, ErrFailedToFetchResource
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -155,25 +183,35 @@ func (o *Overseer) fetchResource(s *Scout, resourceType string) ([]any, error) {
 		}
 	}()
 
+	if resp.StatusCode != http.StatusOK {
+		slog.ErrorContext(o.context, "Unexpected status code", "status", resp.StatusCode)
+		return nil, ErrUnexpectedStatusCode
+	}
+
 	var result []any
 	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
-		return nil, decodeErr
+		slog.ErrorContext(o.context, "Failed to decode response", "error", decodeErr)
+		return nil, ErrFailedToDecodeResponse
 	}
 
 	return result, nil
 }
 
+// Enhanced error handling for handlers.
 func (o *Overseer) handleScoutPing(w http.ResponseWriter, r *http.Request) {
 	var status HealthStatus
 	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
-		commonHttp.WriteErrorResponse(w, http.StatusBadRequest, err)
+		slog.ErrorContext(o.context, "Failed to decode ping request", "error", err)
+		commonHttp.WriteErrorResponse(w, http.StatusBadRequest,
+			ErrInvalidRequestFormat)
 		return
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		slog.ErrorContext(o.context, "Failed to parse remote address", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusBadRequest, err)
+		commonHttp.WriteErrorResponse(w, http.StatusBadRequest,
+			ErrInvalidRemoteAddress)
 		return
 	}
 
