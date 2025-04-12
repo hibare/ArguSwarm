@@ -13,10 +13,13 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/ggicci/httpin"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
@@ -57,6 +60,16 @@ func NewOverseer() (*Overseer, error) {
 	}, nil
 }
 
+type containerHealthyInput struct {
+	Name   string `in:"path=name"`
+	Filter string `in:"query=filter;default=equal" validate:"oneof=starts_with ends_with contains equal"`
+}
+
+func (c containerHealthyInput) Validate() error {
+	validate := validator.New()
+	return validate.Struct(c)
+}
+
 // Start begins the overseer's operation.
 func (o *Overseer) Start() error {
 	ctx := context.Background()
@@ -88,7 +101,7 @@ func (o *Overseer) Start() error {
 			r.Get("/images", o.handleImages)
 			r.Get("/networks", o.handleNetworks)
 			r.Get("/volumes", o.handleVolumes)
-			r.Get("/container/{name}/healthy", o.handleContainerHealth)
+			r.With(httpin.NewInput(containerHealthyInput{})).Get("/container/{name}/healthy", o.handleContainerHealth)
 		})
 	})
 
@@ -312,11 +325,15 @@ func (o *Overseer) handleVolumes(w http.ResponseWriter, r *http.Request) {
 
 func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	containerState := map[string]bool{}
+	containerState := sync.Map{}
 
-	containerName := chi.URLParam(r, "name")
-	if containerName == "" {
-		commonHttp.WriteErrorResponse(w, http.StatusBadRequest, errors.New("container name is required"))
+	payload, ok := r.Context().Value(httpin.Input).(*containerHealthyInput)
+	if !ok {
+		commonHttp.WriteErrorResponse(w, http.StatusBadRequest, ErrInvalidRequestFormat)
+		return
+	}
+	if err := payload.Validate(); err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -347,12 +364,24 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 
 		for _, container := range containers {
 			for _, name := range container.Names {
-				if strings.TrimPrefix(name, "/") == containerName {
-					containerState[name] = container.State == constants.ContainerStateRunning ||
+				name = strings.TrimPrefix(name, "/")
+
+				matches := map[string]func(string, string) bool{
+					"starts_with": strings.HasPrefix,
+					"ends_with":   strings.HasSuffix,
+					"contains":    strings.Contains,
+					"equal":       func(s1, s2 string) bool { return s1 == s2 },
+				}
+
+				if matchFunc, ok := matches[payload.Filter]; ok && matchFunc(name, payload.Name) { //nolint:govet // This is acceptable
+					state := container.State == constants.ContainerStateRunning ||
 						container.State == constants.ContainerStateHealthy
+
+					containerState.Store(name, state)
 				}
 			}
 		}
+
 		return false, nil
 	}
 
@@ -363,16 +392,31 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 	}
 
 	// check containerState map, if all values are true, return 200 else 503
-	if len(containerState) == 0 {
+	count := 0
+	containerState.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+
+	// If no containers were found, return 404
+	if count == 0 {
 		commonHttp.WriteErrorResponse(w, http.StatusNotFound, errors.New("container not found"))
 		return
 	}
 
-	for _, isHealthy := range containerState {
-		if !isHealthy {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			return
+	allHealthy := true
+	containerState.Range(func(_, value interface{}) bool {
+		boolValue, ok := value.(bool) //nolint:govet // This is acceptable
+		if !ok || !boolValue {
+			allHealthy = false
+			return false
 		}
+		return true
+	})
+
+	if !allHealthy {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
