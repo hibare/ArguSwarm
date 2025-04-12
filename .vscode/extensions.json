@@ -10,7 +10,6 @@
     "editorconfig.editorconfig",
     "aaron-bond.better-comments",
     "ms-vscode.go",
-    "esbenp.prettier-vscode",
-    "christian-kohler.npm-intellisense"
+    "esbenp.prettier-vscode"
   ]
 }
