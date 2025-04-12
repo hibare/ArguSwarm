@@ -31,14 +31,14 @@ type HTTPClientConfig struct {
 
 // OverseerConfig defines overseer configuration parameters.
 type OverseerConfig struct {
-	Port       int
-	AuthTokens []string
+	Port          int
+	AuthTokens    []string
+	ScoutTaskAddr string
 }
 
 // ScoutConfig defines scout configuration parameters.
 type ScoutConfig struct {
-	OverseerServerAddress string
-	Port                  int
+	Port int
 }
 
 // Config represents the complete application configuration.
@@ -59,12 +59,12 @@ func Load() {
 
 	Current = &Config{
 		Overseer: OverseerConfig{
-			Port:       env.MustInt("ARGUSWARM_OVERSEER_PORT", constants.DefaultOverseerPort),
-			AuthTokens: env.MustStringSlice("ARGUSWARM_OVERSEER_AUTH_TOKENS", []string{}),
+			Port:          env.MustInt("ARGUSWARM_OVERSEER_PORT", constants.DefaultOverseerPort),
+			AuthTokens:    env.MustStringSlice("ARGUSWARM_OVERSEER_AUTH_TOKENS", []string{}),
+			ScoutTaskAddr: env.MustString("ARGUSWARM_SCOUT_TASK_ADDR", constants.DefaultScoutTask),
 		},
 		Scout: ScoutConfig{
-			OverseerServerAddress: env.MustString("ARGUSWARM_OVERSEER_SERVER_ADDRESS", ""),
-			Port:                  env.MustInt("ARGUSWARM_SCOUT_PORT", constants.DefaultScoutPort),
+			Port: env.MustInt("ARGUSWARM_SCOUT_PORT", constants.DefaultScoutPort),
 		},
 		Logger: LoggerConfig{
 			Level: env.MustString("ARGUSWARM_LOG_LEVEL", commonLogger.DefaultLoggerLevel),

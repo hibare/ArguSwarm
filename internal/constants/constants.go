@@ -30,18 +30,14 @@ const (
 
 	// DefaultServerRequestSizeLimit is the maximum size of a request.
 	DefaultServerRequestSizeLimit = 1024 * 1024 // 1MB
+
+	DefaultScoutTask = "tasks.scout"
 )
 
 // Health check and retry related constants.
 const (
-	// DefaultHealthCheckInterval is how often health checks are performed.
-	DefaultHealthCheckInterval = 30 * time.Second
-
 	// DefaultHTTPClientTimeout is the timeout for HTTP client requests.
 	DefaultHTTPClientTimeout = 10 * time.Second
-
-	// DefaultRetryInterval is the duration to wait between retry attempts.
-	DefaultRetryInterval = 5 * time.Second
 )
 
 // API endpoint paths.
