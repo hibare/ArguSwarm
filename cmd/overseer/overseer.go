@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/go-chi/chi/v5"
@@ -48,29 +47,19 @@ var (
 
 // Overseer manages the health and status of scout agents.
 type Overseer struct {
-	scoutStore *ScoutStore
-	context    context.Context
 	httpClient *http.Client
-}
-
-// HealthStatus represents the health status of a scout.
-type HealthStatus struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	NodeID    string    `json:"node_id"`
 }
 
 // NewOverseer creates a new Overseer instance.
 func NewOverseer() (*Overseer, error) {
 	return &Overseer{
-		scoutStore: NewScoutStore(),
-		context:    context.Background(),
 		httpClient: &http.Client{Timeout: config.Current.HTTPClient.Timeout},
 	}, nil
 }
 
 // Start begins the overseer's operation.
 func (o *Overseer) Start() error {
+	ctx := context.Background()
 	router := chi.NewRouter()
 
 	// Basic middleware
@@ -88,11 +77,6 @@ func (o *Overseer) Start() error {
 	router.Use(security.BasicSecurity)
 
 	router.Route("/api/v1", func(r chi.Router) {
-		// Add shared secret auth middleware only for /scouts/ping
-		r.With(func(next http.Handler) http.Handler {
-			return commonMiddleware.TokenAuth(next, []string{config.Current.Server.SharedSecret})
-		}).Post("/scouts/ping", o.handleScoutPing)
-
 		// Add token auth middleware for all other routes
 		r.Group(func(r chi.Router) {
 			r.Use(func(next http.Handler) http.Handler {
@@ -117,16 +101,13 @@ func (o *Overseer) Start() error {
 		IdleTimeout:  config.Current.Server.IdleTimeout,
 	}
 
-	slog.InfoContext(o.context, "Overseer started", "address", srvAddr)
-
-	// Start health check routine
-	go o.scoutStore.CheckHealth(constants.DefaultHealthCheckInterval)
+	slog.InfoContext(ctx, "Overseer started", "address", srvAddr)
 
 	// Run server in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.ErrorContext(o.context, "failed to start server", "error", err)
+			slog.ErrorContext(ctx, "failed to start server", "error", err)
 			errChan <- err
 		}
 	}()
@@ -143,19 +124,19 @@ func (o *Overseer) Start() error {
 	signal.Notify(c, os.Interrupt)
 	<-c
 
-	ctx, cancel := context.WithTimeout(o.context, constants.DefaultServerShutdownGracePeriod)
+	ctx, cancel := context.WithTimeout(ctx, constants.DefaultServerShutdownGracePeriod)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		slog.ErrorContext(o.context, "Server shutdown failed", "error", err)
+		slog.ErrorContext(ctx, "Server shutdown failed", "error", err)
 		return err
 	}
 
-	slog.InfoContext(o.context, "Server shutdown successfully")
+	slog.InfoContext(ctx, "Server shutdown successfully")
 	return nil
 }
 
-func (o *Overseer) getScouts() ([]string, error) {
+func (o *Overseer) getScouts(ctx context.Context) ([]string, error) {
 	ips, err := net.LookupIP("tasks.scout")
 	if err != nil {
 		return nil, err
@@ -166,21 +147,21 @@ func (o *Overseer) getScouts() ([]string, error) {
 		scouts[i] = ip.String()
 	}
 
-	slog.DebugContext(o.context, "Scouts", "scouts", scouts, "count", len(scouts))
+	slog.DebugContext(ctx, "Scouts", "scouts", scouts, "count", len(scouts))
 
 	return scouts, nil
 }
 
-func (o *Overseer) fetchResource(ip string, resourceType string) ([]any, error) {
+func (o *Overseer) fetchResource(ctx context.Context, ip string, resourceType string) ([]any, error) {
 	url := &url.URL{
 		Scheme: "http",
 		Host:   net.JoinHostPort(ip, strconv.Itoa(config.Current.Scout.Port)),
 		Path:   "/api/v1/" + resourceType,
 	}
 
-	req, err := http.NewRequestWithContext(o.context, http.MethodGet, url.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
-		slog.ErrorContext(o.context, "Failed to create request", "error", err)
+		slog.ErrorContext(ctx, "Failed to create request", "error", err)
 		return nil, ErrFailedToCreateRequest
 	}
 
@@ -189,72 +170,55 @@ func (o *Overseer) fetchResource(ip string, resourceType string) ([]any, error) 
 
 	resp, err := o.httpClient.Do(req)
 	if err != nil {
-		slog.ErrorContext(o.context, "Failed to fetch resource", "error", err)
+		slog.ErrorContext(ctx, "Failed to fetch resource", "error", err)
 		return nil, ErrFailedToFetchResource
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			slog.ErrorContext(o.context, "Failed to close response body", "error", closeErr)
+			slog.ErrorContext(ctx, "Failed to close response body", "error", closeErr)
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		slog.ErrorContext(o.context, "Unexpected status code", "status", resp.StatusCode)
+		slog.ErrorContext(ctx, "Unexpected status code", "status", resp.StatusCode)
 		return nil, ErrUnexpectedStatusCode
 	}
 
 	var result []any
 	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
-		slog.ErrorContext(o.context, "Failed to decode response", "error", decodeErr)
+		slog.ErrorContext(ctx, "Failed to decode response", "error", decodeErr)
 		return nil, ErrFailedToDecodeResponse
 	}
 
 	return result, nil
 }
 
-// Enhanced error handling for handlers.
-func (o *Overseer) handleScoutPing(w http.ResponseWriter, r *http.Request) {
-	var status HealthStatus
-	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
-		slog.ErrorContext(o.context, "Failed to decode ping request", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusBadRequest,
-			ErrInvalidRequestFormat)
-		return
-	}
-
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
+func (o *Overseer) handleListScouts(w http.ResponseWriter, r *http.Request) {
+	scouts, err := o.getScouts(r.Context())
 	if err != nil {
-		slog.ErrorContext(o.context, "Failed to parse remote address", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusBadRequest,
-			ErrInvalidRemoteAddress)
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	o.scoutStore.UpdateScout(status.NodeID, host)
-	slog.InfoContext(o.context, "Scout ping received", "node_id", status.NodeID, "address", host)
-	w.WriteHeader(http.StatusOK)
-}
-
-func (o *Overseer) handleListScouts(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetAllScouts()
 	commonHttp.WriteJsonResponse(w, http.StatusOK, scouts)
 }
 
-func (o *Overseer) handleContainers(w http.ResponseWriter, _ *http.Request) {
-	scouts, err := o.getScouts()
+func (o *Overseer) handleContainers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	scouts, err := o.getScouts(ctx)
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	worker := func(s string) ([]any, error) {
-		return o.fetchResource(s, "containers")
+		return o.fetchResource(ctx, s, "containers")
 	}
 
 	results, errors := utils.ParallelExecute(scouts, worker)
 
 	for _, err := range errors {
-		slog.ErrorContext(o.context, "Error fetching containers", "error", err)
+		slog.ErrorContext(ctx, "Error fetching containers", "error", err)
 	}
 
 	allContainers := make([]any, 0)
@@ -265,21 +229,23 @@ func (o *Overseer) handleContainers(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, allContainers)
 }
 
-func (o *Overseer) handleImages(w http.ResponseWriter, _ *http.Request) {
-	scouts, err := o.getScouts()
+func (o *Overseer) handleImages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	scouts, err := o.getScouts(ctx)
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	worker := func(s string) ([]any, error) {
-		return o.fetchResource(s, "images")
+		return o.fetchResource(ctx, s, "images")
 	}
 
 	results, errors := utils.ParallelExecute(scouts, worker)
 
 	for _, err := range errors {
-		slog.ErrorContext(o.context, "Error fetching images", "error", err)
+		slog.ErrorContext(ctx, "Error fetching images", "error", err)
 	}
 
 	allImages := make([]any, 0)
@@ -290,21 +256,23 @@ func (o *Overseer) handleImages(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, allImages)
 }
 
-func (o *Overseer) handleNetworks(w http.ResponseWriter, _ *http.Request) {
-	scouts, err := o.getScouts()
+func (o *Overseer) handleNetworks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	scouts, err := o.getScouts(ctx)
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	worker := func(s string) ([]any, error) {
-		return o.fetchResource(s, "networks")
+		return o.fetchResource(ctx, s, "networks")
 	}
 
 	results, errors := utils.ParallelExecute(scouts, worker)
 
 	for _, err := range errors {
-		slog.ErrorContext(o.context, "Error fetching networks", "error", err)
+		slog.ErrorContext(ctx, "Error fetching networks", "error", err)
 	}
 
 	allNetworks := make([]any, 0)
@@ -315,21 +283,23 @@ func (o *Overseer) handleNetworks(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, allNetworks)
 }
 
-func (o *Overseer) handleVolumes(w http.ResponseWriter, _ *http.Request) {
-	scouts, err := o.getScouts()
+func (o *Overseer) handleVolumes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	scouts, err := o.getScouts(ctx)
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	worker := func(s string) ([]any, error) {
-		return o.fetchResource(s, "volumes")
+		return o.fetchResource(ctx, s, "volumes")
 	}
 
 	results, errors := utils.ParallelExecute(scouts, worker)
 
 	for _, err := range errors {
-		slog.ErrorContext(o.context, "Error fetching volumes", "error", err)
+		slog.ErrorContext(ctx, "Error fetching volumes", "error", err)
 	}
 
 	allVolumes := make([]any, 0)
@@ -341,6 +311,7 @@ func (o *Overseer) handleVolumes(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	containerState := map[string]bool{}
 
 	containerName := chi.URLParam(r, "name")
@@ -349,14 +320,14 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	scouts, err := o.getScouts()
+	scouts, err := o.getScouts(ctx)
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	worker := func(s string) (bool, error) {
-		containersRaw, cErr := o.fetchResource(s, "containers")
+		containersRaw, cErr := o.fetchResource(ctx, s, "containers")
 		if cErr != nil {
 			return false, cErr
 		}
@@ -388,7 +359,7 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 	_, errs := utils.ParallelExecute(scouts, worker)
 
 	for _, err := range errs {
-		slog.ErrorContext(o.context, "Error checking container health", "error", err)
+		slog.ErrorContext(ctx, "Error checking container health", "error", err)
 	}
 
 	// check containerState map, if all values are true, return 200 else 503

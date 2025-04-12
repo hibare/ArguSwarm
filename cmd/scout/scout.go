@@ -1,16 +1,13 @@
 package scout
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	containerType "github.com/docker/docker/api/types/container"
 	imageType "github.com/docker/docker/api/types/image"
@@ -44,20 +41,9 @@ var (
 // Agent represents a network scout agent.
 type Agent struct {
 	dockerClient *client.Client
-	overseerAddr string
 	nodeID       string
 	httpClient   *http.Client
-	context      context.Context
 }
-
-// HealthStatus represents the health status of a scout.
-type HealthStatus struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	NodeID    string    `json:"node_id"`
-}
-
-type nodeIDKey struct{}
 
 // NewAgent creates a new Agent instance with secure Docker client.
 func NewAgent() (*Agent, error) {
@@ -68,22 +54,16 @@ func NewAgent() (*Agent, error) {
 
 	nodeID := node.GetNodeID()
 
-	// Create context and add node ID
-	ctx := context.Background()
-
-	ctx = context.WithValue(ctx, nodeIDKey{}, nodeID)
-
 	return &Agent{
 		dockerClient: cli,
-		overseerAddr: config.Current.Scout.OverseerServerAddress,
 		nodeID:       nodeID,
 		httpClient:   &http.Client{Timeout: config.Current.HTTPClient.Timeout},
-		context:      ctx,
 	}, nil
 }
 
 // Start begins the agent's operation with enhanced security.
 func (s *Agent) Start() error {
+	ctx := context.Background()
 	router := chi.NewRouter()
 
 	// Basic middleware
@@ -120,16 +100,13 @@ func (s *Agent) Start() error {
 		IdleTimeout:  config.Current.Server.IdleTimeout,
 	}
 
-	slog.InfoContext(s.context, "Scout agent started", "address", srvAddr)
-
-	// Start health check routine
-	go s.pingOverseer()
+	slog.InfoContext(ctx, "Scout agent started", "address", srvAddr)
 
 	// Run our server in a goroutine so that it doesn't block.
 	errChan := make(chan error, 1)
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.ErrorContext(s.context, "failed to start server", "error", err)
+			slog.ErrorContext(ctx, "failed to start server", "error", err)
 			errChan <- err
 		}
 	}()
@@ -150,108 +127,25 @@ func (s *Agent) Start() error {
 	<-c
 
 	// Create a deadline to wait for.
-	ctx, cancel := context.WithTimeout(s.context, constants.DefaultServerShutdownGracePeriod)
+	ctx, cancel := context.WithTimeout(ctx, constants.DefaultServerShutdownGracePeriod)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		slog.ErrorContext(s.context, "Server shutdown failed", "error", err)
+		slog.ErrorContext(ctx, "Server shutdown failed", "error", err)
 		return err
 	}
 
-	slog.InfoContext(s.context, "Server shutdown successfully")
+	slog.InfoContext(ctx, "Server shutdown successfully")
 
 	return nil
 }
 
-func (s *Agent) pingOverseer() {
-	// Try initial connection up to 3 times
-	maxAttempts := 3
+func (s *Agent) handleContainers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			slog.InfoContext(
-				s.context,
-				"Retrying initial health check",
-				"attempt", attempt,
-				"max_attempts", maxAttempts,
-			)
-			time.Sleep(constants.DefaultRetryInterval)
-		}
-
-		if err := s.sendHealthCheck(); err == nil {
-			break
-		}
-
-		if attempt == maxAttempts {
-			slog.ErrorContext(s.context, "Failed to establish initial connection to overseer after all retries")
-		}
-	}
-
-	// Start periodic health checks
-	ticker := time.NewTicker(constants.DefaultHealthCheckInterval)
-	slog.DebugContext(
-		s.context,
-		"Starting health check routine",
-		"node_id", s.nodeID,
-		"overseer_addr", s.overseerAddr,
-		"interval", constants.DefaultHealthCheckInterval,
-	)
-
-	for range ticker.C {
-		_ = s.sendHealthCheck()
-	}
-}
-
-// Helper function to send health check.
-func (s *Agent) sendHealthCheck() error {
-	slog.DebugContext(s.context, "Pinging overseer", "node_id", s.nodeID)
-	status := HealthStatus{
-		Timestamp: time.Now(),
-		NodeID:    s.nodeID,
-	}
-
-	jsonData, err := json.Marshal(status)
-	if err != nil {
-		slog.ErrorContext(s.context, "Error marshaling health status", "error", err)
-		return err
-	}
-	req, err := http.NewRequestWithContext(
-		s.context,
-		http.MethodPost,
-		fmt.Sprintf("%s/api/v1/scouts/ping", s.overseerAddr),
-		bytes.NewBuffer(jsonData),
-	)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(commonMiddleware.AuthHeaderName, config.Current.Server.SharedSecret)
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		slog.ErrorContext(s.context, "Error sending health check", "error", err)
-		return err
-	}
-	if closeErr := resp.Body.Close(); closeErr != nil {
-		return closeErr
-	}
-	slog.DebugContext(s.context, "Pinged overseer", "node_id", s.nodeID, "status", resp.StatusCode)
-	if resp.StatusCode == http.StatusOK {
-		slog.InfoContext(s.context, "Ping successful", "node_id", s.nodeID)
-	} else {
-		slog.ErrorContext(s.context, "Unexpected status code", "status_code", resp.StatusCode)
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
-func (s *Agent) handleContainers(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
 	containers, err := s.dockerClient.ContainerList(ctx, containerType.ListOptions{})
 	if err != nil {
-		slog.ErrorContext(s.context, "Failed to list containers", "error", err)
+		slog.ErrorContext(ctx, "Failed to list containers", "error", err)
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
 			ErrFailedToRetrieveContainerInformation)
 		return
@@ -259,11 +153,12 @@ func (s *Agent) handleContainers(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, containers)
 }
 
-func (s *Agent) handleImages(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
+func (s *Agent) handleImages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	images, err := s.dockerClient.ImageList(ctx, imageType.ListOptions{})
 	if err != nil {
-		slog.ErrorContext(s.context, "Failed to list images", "error", err)
+		slog.ErrorContext(ctx, "Failed to list images", "error", err)
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
 			ErrFailedToRetrieveImageInformation)
 		return
@@ -271,11 +166,12 @@ func (s *Agent) handleImages(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, images)
 }
 
-func (s *Agent) handleNetworks(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
+func (s *Agent) handleNetworks(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	networks, err := s.dockerClient.NetworkList(ctx, networkType.ListOptions{})
 	if err != nil {
-		slog.ErrorContext(s.context, "Failed to list networks", "error", err)
+		slog.ErrorContext(ctx, "Failed to list networks", "error", err)
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
 			ErrFailedToRetrieveNetworkInformation)
 		return
@@ -283,11 +179,12 @@ func (s *Agent) handleNetworks(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, networks)
 }
 
-func (s *Agent) handlerVolumes(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
+func (s *Agent) handlerVolumes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	volumes, err := s.dockerClient.VolumeList(ctx, volumeType.ListOptions{})
 	if err != nil {
-		slog.ErrorContext(s.context, "Failed to list volumes", "error", err)
+		slog.ErrorContext(ctx, "Failed to list volumes", "error", err)
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
 			ErrFailedToRetrieveVolumeInformation)
 		return

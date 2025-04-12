@@ -8,6 +8,8 @@ services:
     volumes:
       - ./:/app
     network_mode: host
+    extra_hosts:
+      - "tasks.scout:127.0.0.1"
 
   scout:
     image: cosmtrek/air

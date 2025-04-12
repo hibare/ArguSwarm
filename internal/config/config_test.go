@@ -25,12 +25,12 @@ func TestLoad(t *testing.T) {
 			},
 			expected: &Config{
 				Scout: ScoutConfig{
-					OverseerServerAddress: "",
-					Port:                  constants.DefaultScoutPort,
+					Port: constants.DefaultScoutPort,
 				},
 				Overseer: OverseerConfig{
-					Port:       constants.DefaultOverseerPort,
-					AuthTokens: []string{},
+					Port:          constants.DefaultOverseerPort,
+					AuthTokens:    []string{},
+					ScoutTaskAddr: constants.DefaultScoutTask,
 				},
 				Logger: LoggerConfig{
 					Level: commonLogger.DefaultLoggerLevel,
@@ -53,6 +53,7 @@ func TestLoad(t *testing.T) {
 				"ARGUSWARM_OVERSEER_SERVER_ADDRESS": "custom-address:8080",
 				"ARGUSWARM_SCOUT_PORT":              "9090",
 				"ARGUSWARM_OVERSEER_PORT":           "8080",
+				"ARGUSWARM_SCOUT_TASK_ADDR":         "custom-task-address",
 				"ARGUSWARM_LOG_LEVEL":               "debug",
 				"ARGUSWARM_LOG_MODE":                "json",
 				"ARGUSWARM_SERVER_READ_TIMEOUT":     "10s",
@@ -64,12 +65,12 @@ func TestLoad(t *testing.T) {
 			},
 			expected: &Config{
 				Scout: ScoutConfig{
-					OverseerServerAddress: "custom-address:8080",
-					Port:                  9090,
+					Port: 9090,
 				},
 				Overseer: OverseerConfig{
-					Port:       8080,
-					AuthTokens: []string{"token1", "token2", "token3"},
+					Port:          8080,
+					AuthTokens:    []string{"token1", "token2", "token3"},
+					ScoutTaskAddr: "custom-task-address",
 				},
 				Logger: LoggerConfig{
 					Level: "debug",
