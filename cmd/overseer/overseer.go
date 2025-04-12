@@ -100,7 +100,6 @@ func (o *Overseer) Start() error {
 			})
 
 			r.Get("/scouts", o.handleListScouts)
-			r.Get("/scouts/active", o.handleActiveScouts)
 			r.Get("/containers", o.handleContainers)
 			r.Get("/images", o.handleImages)
 			r.Get("/networks", o.handleNetworks)
@@ -156,10 +155,26 @@ func (o *Overseer) Start() error {
 	return nil
 }
 
-func (o *Overseer) fetchResource(s *Scout, resourceType string) ([]any, error) {
+func (o *Overseer) getScouts() ([]string, error) {
+	ips, err := net.LookupIP("tasks.scout")
+	if err != nil {
+		return nil, err
+	}
+
+	scouts := make([]string, len(ips))
+	for i, ip := range ips {
+		scouts[i] = ip.String()
+	}
+
+	slog.DebugContext(o.context, "Scouts", "scouts", scouts, "count", len(scouts))
+
+	return scouts, nil
+}
+
+func (o *Overseer) fetchResource(ip string, resourceType string) ([]any, error) {
 	url := &url.URL{
 		Scheme: "http",
-		Host:   net.JoinHostPort(s.Address, strconv.Itoa(config.Current.Scout.Port)),
+		Host:   net.JoinHostPort(ip, strconv.Itoa(config.Current.Scout.Port)),
 		Path:   "/api/v1/" + resourceType,
 	}
 
@@ -225,19 +240,14 @@ func (o *Overseer) handleListScouts(w http.ResponseWriter, _ *http.Request) {
 	commonHttp.WriteJsonResponse(w, http.StatusOK, scouts)
 }
 
-func (o *Overseer) handleActiveScouts(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetActiveScouts()
-	commonHttp.WriteJsonResponse(w, http.StatusOK, scouts)
-}
-
 func (o *Overseer) handleContainers(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetActiveScouts()
-	if len(scouts) == 0 {
-		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, errors.New("no active scouts available"))
+	scouts, err := o.getScouts()
+	if err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s *Scout) ([]any, error) {
+	worker := func(s string) ([]any, error) {
 		return o.fetchResource(s, "containers")
 	}
 
@@ -256,13 +266,13 @@ func (o *Overseer) handleContainers(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (o *Overseer) handleImages(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetActiveScouts()
-	if len(scouts) == 0 {
-		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, errors.New("no active scouts available"))
+	scouts, err := o.getScouts()
+	if err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s *Scout) ([]any, error) {
+	worker := func(s string) ([]any, error) {
 		return o.fetchResource(s, "images")
 	}
 
@@ -281,13 +291,13 @@ func (o *Overseer) handleImages(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (o *Overseer) handleNetworks(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetActiveScouts()
-	if len(scouts) == 0 {
-		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, errors.New("no active scouts available"))
+	scouts, err := o.getScouts()
+	if err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s *Scout) ([]any, error) {
+	worker := func(s string) ([]any, error) {
 		return o.fetchResource(s, "networks")
 	}
 
@@ -306,13 +316,13 @@ func (o *Overseer) handleNetworks(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (o *Overseer) handleVolumes(w http.ResponseWriter, _ *http.Request) {
-	scouts := o.scoutStore.GetActiveScouts()
-	if len(scouts) == 0 {
-		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, errors.New("no active scouts available"))
+	scouts, err := o.getScouts()
+	if err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s *Scout) ([]any, error) {
+	worker := func(s string) ([]any, error) {
 		return o.fetchResource(s, "volumes")
 	}
 
@@ -339,16 +349,16 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	scouts := o.scoutStore.GetActiveScouts()
-	if len(scouts) == 0 {
-		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, errors.New("no active scouts available"))
+	scouts, err := o.getScouts()
+	if err != nil {
+		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s *Scout) (bool, error) {
-		containersRaw, err := o.fetchResource(s, "containers")
-		if err != nil {
-			return false, err
+	worker := func(s string) (bool, error) {
+		containersRaw, cErr := o.fetchResource(s, "containers")
+		if cErr != nil {
+			return false, cErr
 		}
 
 		// Convert []any to []container.Summary
