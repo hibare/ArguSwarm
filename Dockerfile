@@ -1,4 +1,5 @@
 ARG GOLANG_VERSION=1.24
+ARG VERSION=unknown
 
 FROM golang:${GOLANG_VERSION}-alpine AS base
 
@@ -22,7 +23,7 @@ RUN apk update \
 
 COPY . /src/
 
-RUN go build -o arguswarm .
+RUN go build -ldflags "-X github.com/hibare/ArguSwarm/internal/version.CurrentVersion=${VERSION}" -o arguswarm .
 
 # ================== Final Image ================== #
 

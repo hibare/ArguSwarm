@@ -35,6 +35,10 @@ dev: ## Run the development server
 test: ## Run the tests
 	go test -v ./... -cover
 
+.PHONY: build
+build: ## Build the project
+	docker build -t arguswarm . --build-arg GOLANG_VERSION=1.24.2 --build-arg VERSION=0.1.0 --progress=plain --no-cache
+
 .PHONY: clean
 clean: ## Clean up the development server
 	docker compose -f docker-compose.dev.yml down

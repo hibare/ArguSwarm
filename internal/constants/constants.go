@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+// Version information for the application.
+const (
+	// GithubOwner is the owner of the GitHub repository.
+	GithubOwner = "hibare"
+
+	// ProgramIdentifier is the identifier for the application.
+	ProgramIdentifier = "ArguSwarm"
+)
+
 // DefaultScoutPort is the default port number for scout agents.
 const DefaultScoutPort = 8081
 
@@ -31,6 +40,7 @@ const (
 	// DefaultServerRequestSizeLimit is the maximum size of a request.
 	DefaultServerRequestSizeLimit = 1024 * 1024 // 1MB
 
+	// DefaultScoutTask is the default task name for scout agents.
 	DefaultScoutTask = "tasks.scout"
 )
 
