@@ -2,6 +2,8 @@
 package overseer
 
 import (
+	httpin_integration "github.com/ggicci/httpin/integration"
+	"github.com/go-chi/chi/v5"
 	"github.com/spf13/cobra"
 )
 
@@ -17,4 +19,9 @@ var OverseerCmd = &cobra.Command{
 		}
 		return overseer.Start()
 	},
+}
+
+func init() {
+	// Register a directive named "path" to retrieve values from `chi.URLParam`,
+	httpin_integration.UseGochiURLParam("path", chi.URLParam)
 }
