@@ -42,6 +42,9 @@ const (
 
 	// DefaultScoutTask is the default task name for scout agents.
 	DefaultScoutTask = "tasks.scout"
+
+	// DefaultConcurrentScoutsQuery is the maximum number of concurrent scout queries.
+	DefaultConcurrentScoutsQuery = 10
 )
 
 // Health check and retry related constants.

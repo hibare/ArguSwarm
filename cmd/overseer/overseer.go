@@ -23,7 +23,7 @@ import (
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
-	"github.com/hibare/ArguSwarm/internal/utils"
+	commonConcurrency "github.com/hibare/GoCommon/v2/pkg/concurrency"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
@@ -165,10 +165,10 @@ func (o *Overseer) getScouts(ctx context.Context) ([]string, error) {
 	return scouts, nil
 }
 
-func (o *Overseer) fetchResource(ctx context.Context, ip string, resourceType string) ([]any, error) {
+func (o *Overseer) fetchResource(ctx context.Context, scoutIP string, resourceType string) ([]any, error) {
 	url := &url.URL{
 		Scheme: "http",
-		Host:   net.JoinHostPort(ip, strconv.Itoa(config.Current.Scout.Port)),
+		Host:   net.JoinHostPort(scoutIP, strconv.Itoa(config.Current.Scout.Port)),
 		Path:   "/api/v1/" + resourceType,
 	}
 
@@ -206,6 +206,68 @@ func (o *Overseer) fetchResource(ctx context.Context, ip string, resourceType st
 	return result, nil
 }
 
+func (o *Overseer) queryScouts(ctx context.Context, resource string) ([]any, error) {
+	scouts, err := o.getScouts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get scouts: %w", err)
+	}
+
+	if len(scouts) == 0 {
+		return []any{}, nil
+	}
+
+	// Create tasks for parallel execution
+	resultsMap := sync.Map{}
+	tasks := make([]commonConcurrency.ParallelTask, len(scouts))
+
+	for i, s := range scouts {
+		scoutIP := s // capture range variable
+		tasks[i] = commonConcurrency.ParallelTask{
+			Name: fmt.Sprintf("Scout-%s", scoutIP),
+			Task: func(ctx context.Context) error {
+				result, rErr := o.fetchResource(ctx, scoutIP, resource)
+				if rErr != nil {
+					return fmt.Errorf("scout %s failed: %w", scoutIP, rErr)
+				}
+				resultsMap.Store(scoutIP, result)
+				return nil
+			},
+		}
+		slog.DebugContext(ctx, "Scout query created", "scout", scoutIP)
+	}
+
+	slog.DebugContext(ctx, "Executing scout queries", "count", len(tasks), "concurrency", config.Current.Overseer.MaxConcurrentScoutsQuery)
+	// Execute tasks with worker pool
+	errsMap := commonConcurrency.RunParallelTasks(
+		ctx,
+		commonConcurrency.ParallelOptions{
+			WorkerCount: config.Current.Overseer.MaxConcurrentScoutsQuery,
+		},
+		tasks...)
+
+	// Handle errors
+	if len(errsMap) == len(scouts) {
+		return nil, fmt.Errorf("all scout queries failed: %v", errsMap)
+	}
+
+	if len(errsMap) > 0 {
+		for task, err := range errsMap {
+			slog.ErrorContext(ctx, "Scout query failed", "task", task, "error", err)
+		}
+	}
+
+	// Collect results
+	results := make([]any, 0)
+	resultsMap.Range(func(_, value interface{}) bool {
+		if v, ok := value.([]any); ok {
+			results = append(results, v...)
+		}
+		return true
+	})
+
+	return results, nil
+}
+
 func (o *Overseer) handleListScouts(w http.ResponseWriter, r *http.Request) {
 	scouts, err := o.getScouts(r.Context())
 	if err != nil {
@@ -217,115 +279,48 @@ func (o *Overseer) handleListScouts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *Overseer) handleContainers(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	scouts, err := o.getScouts(ctx)
+	results, err := o.queryScouts(r.Context(), "containers")
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s string) ([]any, error) {
-		return o.fetchResource(ctx, s, "containers")
-	}
-
-	results, errors := utils.ParallelExecute(scouts, worker)
-
-	for _, err := range errors {
-		slog.ErrorContext(ctx, "Error fetching containers", "error", err)
-	}
-
-	allContainers := make([]any, 0)
-	for _, containers := range results {
-		allContainers = append(allContainers, containers...)
-	}
-
-	commonHttp.WriteJsonResponse(w, http.StatusOK, allContainers)
+	commonHttp.WriteJsonResponse(w, http.StatusOK, results)
 }
 
 func (o *Overseer) handleImages(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	scouts, err := o.getScouts(ctx)
+	results, err := o.queryScouts(r.Context(), "images")
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s string) ([]any, error) {
-		return o.fetchResource(ctx, s, "images")
-	}
-
-	results, errors := utils.ParallelExecute(scouts, worker)
-
-	for _, err := range errors {
-		slog.ErrorContext(ctx, "Error fetching images", "error", err)
-	}
-
-	allImages := make([]any, 0)
-	for _, images := range results {
-		allImages = append(allImages, images...)
-	}
-
-	commonHttp.WriteJsonResponse(w, http.StatusOK, allImages)
+	commonHttp.WriteJsonResponse(w, http.StatusOK, results)
 }
 
 func (o *Overseer) handleNetworks(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	scouts, err := o.getScouts(ctx)
+	results, err := o.queryScouts(r.Context(), "networks")
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s string) ([]any, error) {
-		return o.fetchResource(ctx, s, "networks")
-	}
-
-	results, errors := utils.ParallelExecute(scouts, worker)
-
-	for _, err := range errors {
-		slog.ErrorContext(ctx, "Error fetching networks", "error", err)
-	}
-
-	allNetworks := make([]any, 0)
-	for _, networks := range results {
-		allNetworks = append(allNetworks, networks...)
-	}
-
-	commonHttp.WriteJsonResponse(w, http.StatusOK, allNetworks)
+	commonHttp.WriteJsonResponse(w, http.StatusOK, results)
 }
 
 func (o *Overseer) handleVolumes(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	scouts, err := o.getScouts(ctx)
+	results, err := o.queryScouts(r.Context(), "volumes")
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s string) ([]any, error) {
-		return o.fetchResource(ctx, s, "volumes")
-	}
-
-	results, errors := utils.ParallelExecute(scouts, worker)
-
-	for _, err := range errors {
-		slog.ErrorContext(ctx, "Error fetching volumes", "error", err)
-	}
-
-	allVolumes := make([]any, 0)
-	for _, volumes := range results {
-		allVolumes = append(allVolumes, volumes...)
-	}
-
-	commonHttp.WriteJsonResponse(w, http.StatusOK, allVolumes)
+	commonHttp.WriteJsonResponse(w, http.StatusOK, results)
 }
 
 func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	containerState := sync.Map{}
+	containerState := map[string]bool{}
 
 	payload, ok := r.Context().Value(httpin.Input).(*containerHealthyInput)
 	if !ok {
@@ -337,86 +332,60 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	scouts, err := o.getScouts(ctx)
+	results, err := o.queryScouts(ctx, "containers")
 	if err != nil {
 		commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	worker := func(s string) (bool, error) {
-		containersRaw, cErr := o.fetchResource(ctx, s, "containers")
-		if cErr != nil {
-			return false, cErr
+	containers := make([]container.Summary, len(results))
+	for i, raw := range results {
+		// Convert map to JSON and then to container.Summary struct
+		jsonData, jsonErr := json.Marshal(raw)
+		if jsonErr != nil {
+			commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, jsonErr)
+			return
 		}
-
-		// Convert []any to []container.Summary
-		containers := make([]container.Summary, len(containersRaw))
-		for i, raw := range containersRaw {
-			// Convert map to JSON and then to container.Summary struct
-			jsonData, jsonErr := json.Marshal(raw)
-			if jsonErr != nil {
-				return false, jsonErr
-			}
-			if jsonErr1 := json.Unmarshal(jsonData, &containers[i]); jsonErr1 != nil {
-				return false, jsonErr1
-			}
+		if jsonErr1 := json.Unmarshal(jsonData, &containers[i]); jsonErr1 != nil {
+			commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, jsonErr1)
+			return
 		}
-
-		for _, container := range containers {
-			for _, name := range container.Names {
-				name = strings.TrimPrefix(name, "/")
-
-				matches := map[string]func(string, string) bool{
-					"starts_with": strings.HasPrefix,
-					"ends_with":   strings.HasSuffix,
-					"contains":    strings.Contains,
-					"equal":       func(s1, s2 string) bool { return s1 == s2 },
-				}
-
-				if matchFunc, ok := matches[payload.Filter]; ok && matchFunc(name, payload.Name) { //nolint:govet // This is acceptable
-					state := container.State == constants.ContainerStateRunning ||
-						container.State == constants.ContainerStateHealthy
-
-					containerState.Store(name, state)
-				}
-			}
-		}
-
-		return false, nil
 	}
 
-	_, errs := utils.ParallelExecute(scouts, worker)
+	// Check if the container name matches the filter
+	// and update the state accordingly
+	for _, container := range containers {
+		for _, name := range container.Names {
+			name = strings.TrimPrefix(name, "/")
 
-	for _, err := range errs {
-		slog.ErrorContext(ctx, "Error checking container health", "error", err)
+			matches := map[string]func(string, string) bool{
+				"starts_with": strings.HasPrefix,
+				"ends_with":   strings.HasSuffix,
+				"contains":    strings.Contains,
+				"equal":       func(s1, s2 string) bool { return s1 == s2 },
+			}
+
+			if matchFunc, ok := matches[payload.Filter]; ok && matchFunc(name, payload.Name) { //nolint:govet // This is acceptable
+				state := container.State == constants.ContainerStateRunning ||
+					container.State == constants.ContainerStateHealthy
+
+				containerState[name] = state
+			}
+		}
 	}
-
-	// check containerState map, if all values are true, return 200 else 503
-	count := 0
-	containerState.Range(func(_, _ interface{}) bool {
-		count++
-		return true
-	})
 
 	// If no containers were found, return 404
-	if count == 0 {
+	if len(containerState) == 0 {
 		commonHttp.WriteErrorResponse(w, http.StatusNotFound, errors.New("container not found"))
 		return
 	}
 
-	allHealthy := true
-	containerState.Range(func(_, value interface{}) bool {
-		boolValue, ok := value.(bool) //nolint:govet // This is acceptable
-		if !ok || !boolValue {
-			allHealthy = false
-			return false
+	// Check if all containers are healthy
+	for name, state := range containerState {
+		if !state {
+			commonHttp.WriteJsonResponse(w, http.StatusOK, map[string]bool{name: state})
+			return
 		}
-		return true
-	})
-
-	if !allHealthy {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		return
 	}
 
 	w.WriteHeader(http.StatusOK)

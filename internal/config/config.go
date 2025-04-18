@@ -31,9 +31,10 @@ type HTTPClientConfig struct {
 
 // OverseerConfig defines overseer configuration parameters.
 type OverseerConfig struct {
-	Port          int
-	AuthTokens    []string
-	ScoutTaskAddr string
+	Port                     int
+	AuthTokens               []string
+	ScoutTaskAddr            string
+	MaxConcurrentScoutsQuery int
 }
 
 // ScoutConfig defines scout configuration parameters.
@@ -59,9 +60,10 @@ func Load() {
 
 	Current = &Config{
 		Overseer: OverseerConfig{
-			Port:          env.MustInt("ARGUSWARM_OVERSEER_PORT", constants.DefaultOverseerPort),
-			AuthTokens:    env.MustStringSlice("ARGUSWARM_OVERSEER_AUTH_TOKENS", []string{}),
-			ScoutTaskAddr: env.MustString("ARGUSWARM_SCOUT_TASK_ADDR", constants.DefaultScoutTask),
+			Port:                     env.MustInt("ARGUSWARM_OVERSEER_PORT", constants.DefaultOverseerPort),
+			AuthTokens:               env.MustStringSlice("ARGUSWARM_OVERSEER_AUTH_TOKENS", []string{}),
+			ScoutTaskAddr:            env.MustString("ARGUSWARM_SCOUT_TASK_ADDR", constants.DefaultScoutTask),
+			MaxConcurrentScoutsQuery: env.MustInt("ARGUSWARM_MAX_CONCURRENT_SCOUTS_QUERY", constants.DefaultConcurrentScoutsQuery),
 		},
 		Scout: ScoutConfig{
 			Port: env.MustInt("ARGUSWARM_SCOUT_PORT", constants.DefaultScoutPort),
