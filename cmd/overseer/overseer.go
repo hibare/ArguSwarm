@@ -380,10 +380,10 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Check if all containers are healthy
+	// Check if all containers are healthy, error if any are not healthy
 	for name, state := range containerState {
 		if !state {
-			commonHttp.WriteJsonResponse(w, http.StatusOK, map[string]bool{name: state})
+			commonHttp.WriteErrorResponse(w, http.StatusServiceUnavailable, fmt.Errorf("container %s is not healthy", name))
 			return
 		}
 	}
