@@ -4,6 +4,14 @@
 <img src="./internal/assets/favicon.png" alt="Tekton Chains logo" width=200 height=200></img>
 </p>
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/hibare/ArguSwarm)](https://goreportcard.com/report/github.com/hibare/ArguSwarm)
+[![Docker Hub](https://img.shields.io/docker/pulls/hibare/arguswarm)](https://hub.docker.com/r/hibare/arguswarm)
+[![Docker image size](https://img.shields.io/docker/image-size/hibare/arguswarm/latest)](https://hub.docker.com/r/hibare/arguswarm)
+[![GitHub issues](https://img.shields.io/github/issues/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/pulls)
+[![GitHub](https://img.shields.io/github/license/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/blob/main/LICENSE)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/releases)
+
 ArguSwarm is a distributed Docker container monitoring system designed for Docker Swarm environments. It consists of an overseer service that runs on manager nodes and scout agents that run on worker nodes to collect and aggregate container information across the swarm.
 
 ## Features
