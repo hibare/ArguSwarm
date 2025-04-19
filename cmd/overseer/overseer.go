@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"github.com/hibare/ArguSwarm/internal/assets"
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
@@ -89,6 +90,8 @@ func (o *Overseer) Start() error {
 	// Use common security middleware
 	router.Use(security.BasicSecurity)
 
+	router.Get("/favicon.ico", o.handleFavicon)
+
 	router.Route("/api/v1", func(r chi.Router) {
 		// Add token auth middleware for all other routes
 		r.Group(func(r chi.Router) {
@@ -147,6 +150,12 @@ func (o *Overseer) Start() error {
 
 	slog.InfoContext(ctx, "Server shutdown successfully")
 	return nil
+}
+
+func (o *Overseer) handleFavicon(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	_, _ = w.Write(assets.Favicon)
 }
 
 func (o *Overseer) getScouts(ctx context.Context) ([]string, error) {
