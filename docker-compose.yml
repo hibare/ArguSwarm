@@ -1,0 +1,45 @@
+networks:
+  arguswarm_nw:
+    name: arguswarm_nw
+    driver: overlay
+    attachable: true
+    driver_opts:
+      com.docker.network.driver.mtu: 1280
+
+  external:
+    name: external
+    external: true
+    driver: overlay
+
+services:
+  overseer:
+    image: hibare/arguswarm:next
+    command: overseer
+    networks:
+      - arguswarm_nw
+      - external
+    env_file:
+      - .env
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+
+  scout:
+    image: hibare/arguswarm:next
+    command: scout
+    networks:
+      - arguswarm_nw
+    env_file:
+      - .env
+    environment:
+      - NODE_ID={{.Node.Hostname}}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
