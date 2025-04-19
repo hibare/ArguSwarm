@@ -1,5 +1,9 @@
 # ArguSwarm
 
+<p align="center">
+<img src="./internal/assets/favicon.png" alt="Tekton Chains logo" width=200 height=200></img>
+</p>
+
 ArguSwarm is a distributed Docker container monitoring system designed for Docker Swarm environments. It consists of an overseer service that runs on manager nodes and scout agents that run on worker nodes to collect and aggregate container information across the swarm.
 
 ## Features
@@ -33,46 +37,61 @@ ArguSwarm is a distributed Docker container monitoring system designed for Docke
 
 1. Clone the repository:
 
-```bash
-git clone https://github.com/hibare/ArguSwarm.git
-cd ArguSwarm
-```
+   ```bash
+   git clone https://github.com/hibare/ArguSwarm.git
+   cd ArguSwarm
+   ```
 
 2. Copy and configure environment variables:
 
-```bash
-cp .env.example .env
-```
+   ```bash
+   cp .env.example .env
+   ```
 
 3. Configure the following required environment variables:
 
-```bash
-ARGUSWARM_SERVER_SHARED_SECRET=<your-secret>  # Shared secret for overseer-scout communication
-ARGUSWARM_OVERSEER_AUTH_TOKENS=<token1,token2> # Auth tokens for API access
-```
+   ```bash
+   ARGUSWARM_SERVER_SHARED_SECRET=<your-secret>  # Shared secret for overseer-scout communication
+   ARGUSWARM_OVERSEER_AUTH_TOKENS=<token1,token2> # Auth tokens for API access
+   ```
 
 4. Deploy to Docker Swarm:
 
-```bash
-docker stack deploy -c docker-compose.yml arguswarm
-```
+   ```bash
+   docker stack deploy -c docker-compose.yml arguswarm
+   ```
+
+### Configuration
+
+ArguSwarm can be configured using environment variables:
+
+| Variable                              | Description                | Default |
+| ------------------------------------- | -------------------------- | ------- |
+| ARGUSWARM_OVERSEER_PORT               | Overseer service port      | 8080    |
+| ARGUSWARM_SCOUT_PORT                  | Scout service port         | 8081    |
+| ARGUSWARM_MAX_CONCURRENT_SCOUTS_QUERY | Max parallel scout queries | 10      |
+| ARGUSWARM_LOG_LEVEL                   | Logging level              | info    |
+| ARGUSWARM_LOG_MODE                    | Logging mode (text/json)   | text    |
 
 ## API Documentation
 
 Overseer API Endpoints
-`GET /api/v1/scouts` - List all connected scouts
-`GET /api/v1/containers` - List all containers across the swarm
-`GET /api/v1/images` - List all images across the swarm
-`GET /api/v1/networks` - List all networks across the swarm
-`GET /api/v1/volumes` - List all volumes across the swarm
-`GET /api/v1/container/{name}/healthy` - Check container health status
+
+- `GET /api/v1/scouts` - List all connected scouts
+- `GET /api/v1/containers` - List all containers across the swarm
+- `GET /api/v1/images` - List all images across the swarm
+- `GET /api/v1/networks` - List all networks across the swarm
+- `GET /api/v1/volumes` - List all volumes across the swarm
+- `GET /api/v1/container/{name}/healthy` - Check container health status
 
 All API endpoints require authentication using the configured auth tokens.
 
 Scout API Endpoints
-`GET /api/v1/containers` - List containers on the node
-`GET /api/v1/images - List images on the node
-`GET /api/v1/networks`- List networks on the node`GET /api/v1/volumes` - List volumes on the node
+
+- `GET /api/v1/containers` - List containers on the node
+- `GET /api/v1/images` - List images on the node
+- `GET /api/v1/networks`- List networks on the node
+- `GET /api/v1/volumes` - List volumes on the node
 
 ## Development
 
@@ -87,21 +106,21 @@ Scout API Endpoints
 
 1. Initialize the project:
 
-```bash
-make init
-```
+   ```bash
+   make init
+   ```
 
 2. Start development servers:
 
-```bash
-make dev
-```
+   ```bash
+   make dev
+   ```
 
 3. Run tests:
 
-```bash
-make test
-```
+   ```bash
+   make test
+   ```
 
 ### Project Structure
 
@@ -110,18 +129,6 @@ make test
 - `openapi` - API specifications
 - `.air` - Development server configurations
 - `docker-compose.dev.yml` - Development environment setup
-
-### Configuration
-
-ArguSwarm can be configured using environment variables:
-
-| Variable                              | Description                | Default |
-| ------------------------------------- | -------------------------- | ------- |
-| ARGUSWARM_OVERSEER_PORT               | Overseer service port      | 8080    |
-| ARGUSWARM_SCOUT_PORT                  | Scout service port         | 8081    |
-| ARGUSWARM_MAX_CONCURRENT_SCOUTS_QUERY | Max parallel scout queries | 10      |
-| ARGUSWARM_LOG_LEVEL                   | Logging level              | info    |
-| ARGUSWARM_LOG_MODE                    | Logging mode (text/json)   | text    |
 
 ## Contributing
 
