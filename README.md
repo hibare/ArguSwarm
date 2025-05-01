@@ -1,7 +1,7 @@
 # ArguSwarm
 
 <p align="center">
-<img src="./internal/assets/favicon.png" alt="Tekton Chains logo" width=200 height=200></img>
+<img src="./internal/assets/favicon.png" alt="ArguSwarm logo" width=200 height=200></img>
 </p>
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/hibare/ArguSwarm)](https://goreportcard.com/report/github.com/hibare/ArguSwarm)
