@@ -49,6 +49,20 @@ var (
 	ErrInvalidRemoteAddress = errors.New("invalid remote address")
 )
 
+const (
+	// FilterStartsWith checks if the string starts with the given prefix.
+	FilterStartsWith = "starts_with"
+
+	// FilterEndsWith checks if the string ends with the given suffix.
+	FilterEndsWith = "ends_with"
+
+	// FilterContains checks if the string contains the given substring.
+	FilterContains = "contains"
+
+	// FilterEqual checks if the string is equal to the given value.
+	FilterEqual = "equal"
+)
+
 // Overseer manages the health and status of scout agents.
 type Overseer struct {
 	httpClient *http.Client
@@ -371,20 +385,22 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Define the matches map once before the loops
+	matches := map[string]func(string, string) bool{
+		FilterStartsWith: strings.HasPrefix,
+		FilterEndsWith:   strings.HasSuffix,
+		FilterContains:   strings.Contains,
+		FilterEqual:      func(s1, s2 string) bool { return s1 == s2 },
+	}
+
 	// Check if the container name matches the filter
 	// and update the state accordingly
 	for _, container := range containers {
 		for _, name := range container.Names {
 			name = strings.TrimPrefix(name, "/")
 
-			matches := map[string]func(string, string) bool{
-				"starts_with": strings.HasPrefix,
-				"ends_with":   strings.HasSuffix,
-				"contains":    strings.Contains,
-				"equal":       func(s1, s2 string) bool { return s1 == s2 },
-			}
-
-			if matchFunc, ok := matches[payload.Filter]; ok && matchFunc(name, payload.Name) { //nolint:govet // This is acceptable
+			// Use the pre-defined matches map
+			if matchFunc, filterOk := matches[payload.Filter]; filterOk && matchFunc(name, payload.Name) {
 				state := container.State == constants.ContainerStateRunning ||
 					container.State == constants.ContainerStateHealthy
 
