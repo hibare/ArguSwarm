@@ -1,8 +1,9 @@
-# ArguSwarm
+<div align="center">
+  <img src="./internal/assets/favicon.png" alt="ArguSwarm Logo" width="200" height="200">
 
-<p align="center">
-<img src="./internal/assets/favicon.png" alt="ArguSwarm logo" width=200 height=200></img>
-</p>
+  # ArguSwarm
+
+  *A Distributed Docker Container information System*
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/hibare/ArguSwarm)](https://goreportcard.com/report/github.com/hibare/ArguSwarm)
 [![Docker Hub](https://img.shields.io/docker/pulls/hibare/arguswarm)](https://hub.docker.com/r/hibare/arguswarm)
@@ -12,7 +13,9 @@
 [![GitHub](https://img.shields.io/github/license/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/blob/main/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/hibare/ArguSwarm)](https://github.com/hibare/ArguSwarm/releases)
 
-ArguSwarm is a distributed Docker container monitoring system designed for Docker Swarm environments. It consists of an overseer service that runs on manager nodes and scout agents that run on worker nodes to collect and aggregate container information across the swarm.
+</div>
+
+ArguSwarm is a distributed Docker container info system designed for Docker Swarm environments. It consists of an overseer service that runs on manager nodes and scout agents that run on worker nodes to collect and aggregate container information across the swarm.
 
 ## Features
 
