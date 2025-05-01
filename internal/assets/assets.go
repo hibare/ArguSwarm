@@ -7,5 +7,5 @@ import (
 
 // Favicon is the embedded favicon image.
 //
-//go:embed favicon.png
+//go:embed favicon.ico
 var Favicon []byte
