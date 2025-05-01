@@ -91,6 +91,7 @@ func (o *Overseer) Start() error {
 	router.Use(security.BasicSecurity)
 
 	router.Get("/favicon.ico", o.handleFavicon)
+	router.Get("/assets/favicon.ico", o.handleFavicon) // Add alternative path
 
 	router.Route("/api/v1", func(r chi.Router) {
 		// Add token auth middleware for all other routes
@@ -153,9 +154,18 @@ func (o *Overseer) Start() error {
 }
 
 func (o *Overseer) handleFavicon(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "image/png")
+	// Set correct content type for favicon
+	w.Header().Set("Content-Type", "image/x-icon") // Changed from image/png
+
+	// Add additional headers for better browser compatibility
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	_, _ = w.Write(assets.Favicon)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Length", strconv.Itoa(len(assets.Favicon)))
+
+	// Write favicon data
+	if _, err := w.Write(assets.Favicon); err != nil {
+		slog.ErrorContext(context.Background(), "Failed to serve favicon", "error", err)
+	}
 }
 
 func (o *Overseer) getScouts(ctx context.Context) ([]string, error) {
