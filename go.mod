@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/ggicci/httpin v0.20.0
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/hibare/GoCommon/v2 v2.23.0
 	github.com/spf13/cobra v1.9.1
