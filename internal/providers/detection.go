@@ -34,7 +34,6 @@ func DetectProviderType() ProviderType {
 		return ProviderDockerSwarm
 	}
 
-
 	// Default to Docker Swarm for backward compatibility
 	return ProviderDockerSwarm
 }
