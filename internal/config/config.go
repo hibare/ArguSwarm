@@ -42,6 +42,11 @@ type ScoutConfig struct {
 	Port int
 }
 
+// ProviderConfig defines provider-specific configuration parameters.
+type ProviderConfig struct {
+	Type string
+}
+
 // Config represents the complete application configuration.
 type Config struct {
 	Logger     LoggerConfig
@@ -49,6 +54,7 @@ type Config struct {
 	HTTPClient HTTPClientConfig
 	Overseer   OverseerConfig
 	Scout      ScoutConfig
+	Provider   ProviderConfig
 }
 
 // Current holds the active application configuration.
@@ -80,6 +86,9 @@ func Load() {
 		},
 		HTTPClient: HTTPClientConfig{
 			Timeout: env.MustDuration("ARGUSWARM_HTTP_CLIENT_TIMEOUT", constants.DefaultHTTPClientTimeout),
+		},
+		Provider: ProviderConfig{
+			Type: env.MustString("ARGUSWARM_PROVIDER", "auto"),
 		},
 	}
 

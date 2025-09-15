@@ -58,12 +58,3 @@ const (
 	// PingPath is the endpoint for health check pings.
 	PingPath = "/ping"
 )
-
-// Container state constants.
-const (
-	// ContainerStateRunning indicates a container is currently running.
-	ContainerStateRunning = "running"
-
-	// ContainerStateHealthy indicates a container is in a healthy state.
-	ContainerStateHealthy = "healthy"
-)

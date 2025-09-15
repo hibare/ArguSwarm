@@ -2,62 +2,45 @@ package scout
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 
-	containerType "github.com/docker/docker/api/types/container"
-	imageType "github.com/docker/docker/api/types/image"
-	networkType "github.com/docker/docker/api/types/network"
-	volumeType "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hibare/ArguSwarm/internal/config"
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
-	"github.com/hibare/ArguSwarm/internal/node"
-	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
+	"github.com/hibare/ArguSwarm/internal/providers"
+	dockerSwarm "github.com/hibare/ArguSwarm/internal/providers/dockerswarm"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
-)
-
-var (
-	// ErrFailedToRetrieveImageInformation is an error that occurs when a resource cannot be retrieved.
-	ErrFailedToRetrieveImageInformation = errors.New("failed to retrieve image information")
-
-	// ErrFailedToRetrieveContainerInformation is an error that occurs when a resource cannot be retrieved.
-	ErrFailedToRetrieveContainerInformation = errors.New("failed to retrieve container information")
-
-	// ErrFailedToRetrieveNetworkInformation is an error that occurs when a resource cannot be retrieved.
-	ErrFailedToRetrieveNetworkInformation = errors.New("failed to retrieve network information")
-
-	// ErrFailedToRetrieveVolumeInformation is an error that occurs when a resource cannot be retrieved.
-	ErrFailedToRetrieveVolumeInformation = errors.New("failed to retrieve volume information")
 )
 
 // Agent represents a network scout agent.
 type Agent struct {
-	dockerClient *client.Client
-	nodeID       string
-	httpClient   *http.Client
+	scoutAgent interface{}
+	provider   providers.ProviderType
 }
 
-// NewAgent creates a new Agent instance with secure Docker client.
+// NewAgent creates a new Agent instance for Docker Swarm only.
 func NewAgent() (*Agent, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+	providerType := providers.DetectProviderType()
+
+	// Scouts are only needed for Docker Swarm
+	if providerType != providers.ProviderDockerSwarm {
+		return nil, fmt.Errorf("scouts are only needed for Docker Swarm, detected provider: %s", providerType)
 	}
 
-	nodeID := node.GetNodeID()
+	scoutAgent, err := dockerSwarm.NewScoutAgent()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scout agent: %w", err)
+	}
 
 	return &Agent{
-		dockerClient: cli,
-		nodeID:       nodeID,
-		httpClient:   &http.Client{Timeout: config.Current.HTTPClient.Timeout},
+		scoutAgent: scoutAgent,
+		provider:   providerType,
 	}, nil
 }
 
@@ -87,7 +70,7 @@ func (s *Agent) Start() error {
 		r.Get("/containers", s.handleContainers)
 		r.Get("/images", s.handleImages)
 		r.Get("/networks", s.handleNetworks)
-		r.Get("/volumes", s.handlerVolumes)
+		r.Get("/volumes", s.handleVolumes)
 	})
 
 	srvAddr := fmt.Sprintf(":%d", constants.DefaultScoutPort)
@@ -141,53 +124,29 @@ func (s *Agent) Start() error {
 }
 
 func (s *Agent) handleContainers(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	containers, err := s.dockerClient.ContainerList(ctx, containerType.ListOptions{})
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to list containers", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
-			ErrFailedToRetrieveContainerInformation)
-		return
+	// Only Docker Swarm scouts are supported
+	if agent, ok := s.scoutAgent.(*dockerSwarm.ScoutAgent); ok {
+		agent.HandleContainers(w, r)
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, containers)
 }
 
 func (s *Agent) handleImages(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	images, err := s.dockerClient.ImageList(ctx, imageType.ListOptions{})
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to list images", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
-			ErrFailedToRetrieveImageInformation)
-		return
+	// Only Docker Swarm scouts are supported
+	if agent, ok := s.scoutAgent.(*dockerSwarm.ScoutAgent); ok {
+		agent.HandleImages(w, r)
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, images)
 }
 
 func (s *Agent) handleNetworks(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	networks, err := s.dockerClient.NetworkList(ctx, networkType.ListOptions{})
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to list networks", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
-			ErrFailedToRetrieveNetworkInformation)
-		return
+	// Only Docker Swarm scouts are supported
+	if agent, ok := s.scoutAgent.(*dockerSwarm.ScoutAgent); ok {
+		agent.HandleNetworks(w, r)
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, networks)
 }
 
-func (s *Agent) handlerVolumes(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	volumes, err := s.dockerClient.VolumeList(ctx, volumeType.ListOptions{})
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to list volumes", "error", err)
-		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError,
-			ErrFailedToRetrieveVolumeInformation)
-		return
+func (s *Agent) handleVolumes(w http.ResponseWriter, r *http.Request) {
+	// Only Docker Swarm scouts are supported
+	if agent, ok := s.scoutAgent.(*dockerSwarm.ScoutAgent); ok {
+		agent.HandleVolumes(w, r)
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, volumes.Volumes)
 }

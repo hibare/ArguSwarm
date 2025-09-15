@@ -33,9 +33,9 @@ paths:
   /api/v1/containers:
     get:
       tags:
-        - Docker Resources
+        - Container Resources
       summary: Get all containers
-      description: Returns a list of all containers on the host
+      description: Returns a list of all containers (containers/pods) on the host
       security:
         - SharedSecretAuth: []
       responses:
