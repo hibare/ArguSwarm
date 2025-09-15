@@ -1,3 +1,18 @@
 {
-  "cSpell.words": ["arguswarm", "govet", "httpin", "nolint", "pipefail"]
+  "cSpell.words": [
+    "apimachinery",
+    "arguswarm",
+    "clientcmd",
+    "clientset",
+    "govet",
+    "hibare",
+    "httpin",
+    "kubeconfig",
+    "kubelet",
+    "metav",
+    "Mountpoint",
+    "nolint",
+    "pipefail",
+    "pvcs"
+  ]
 }

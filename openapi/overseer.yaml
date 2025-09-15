@@ -134,9 +134,9 @@ paths:
   /api/v1/containers:
     get:
       tags:
-        - Docker Resources
+        - Container Resources
       summary: Get all containers from all scouts
-      description: Returns aggregated list of containers from all active scouts
+      description: Returns aggregated list of containers (containers/pods) from all active scouts
       responses:
         "200":
           description: Aggregated list of containers
@@ -321,9 +321,9 @@ paths:
   /api/v1/container/{name}/healthy:
     get:
       tags:
-        - Docker Resources
+        - Container Resources
       summary: Check container health
-      description: Checks if a specific container is healthy (running) across all scouts
+      description: Checks if a specific container (container/pod) is healthy (running) across all scouts
       parameters:
         - name: name
           in: path

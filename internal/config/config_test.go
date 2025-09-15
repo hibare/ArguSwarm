@@ -46,6 +46,9 @@ func TestLoad(t *testing.T) {
 				HTTPClient: HTTPClientConfig{
 					Timeout: constants.DefaultHTTPClientTimeout,
 				},
+				Provider: ProviderConfig{
+					Type: "auto",
+				},
 			},
 		},
 		{
@@ -88,6 +91,9 @@ func TestLoad(t *testing.T) {
 				HTTPClient: HTTPClientConfig{
 					Timeout: 5 * time.Second,
 				},
+				Provider: ProviderConfig{
+					Type: "auto",
+				},
 			},
 		},
 	}
@@ -119,7 +125,7 @@ func TestLoad_InvalidLogLevel(t *testing.T) {
 	}
 	const testName = "TestLoad_InvalidLogLevel"
 	// #nosec G204
-	cmd := exec.Command(os.Args[0], "-test.run=^"+testName+"$")
+	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
 	err := cmd.Run()
 	var e *exec.ExitError
@@ -140,7 +146,7 @@ func TestLoad_InvalidLogMode(t *testing.T) {
 	}
 	const testName = "TestLoad_InvalidLogMode"
 	// #nosec G204
-	cmd := exec.Command(os.Args[0], "-test.run=^"+testName+"$")
+	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
 	err := cmd.Run()
 	var e *exec.ExitError
@@ -158,7 +164,7 @@ func TestLoad_MissingSharedSecret(t *testing.T) {
 	}
 	const testName = "TestLoad_MissingSharedSecret"
 	// #nosec G204
-	cmd := exec.Command(os.Args[0], "-test.run=^"+testName+"$")
+	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
 	err := cmd.Run()
 	var e *exec.ExitError

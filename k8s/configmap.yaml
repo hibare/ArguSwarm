@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arguswarm-config
+  namespace: arguswarm
+data:
+  ARGUSWARM_PROVIDER: "kubernetes"
+  ARGUSWARM_LOG_LEVEL: "info"
+  ARGUSWARM_LOG_MODE: "json"
+  ARGUSWARM_OVERSEER_PORT: "8080"
+  ARGUSWARM_SCOUT_PORT: "8081"
+  ARGUSWARM_MAX_CONCURRENT_SCOUTS_QUERY: "10"

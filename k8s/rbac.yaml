@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arguswarm-overseer
+  namespace: arguswarm
+---
+# Note: Scout service account not needed for Kubernetes deployment
+# The overseer queries the Kubernetes API directly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: arguswarm-overseer
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "services", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: arguswarm-overseer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: arguswarm-overseer
+subjects:
+  - kind: ServiceAccount
+    name: arguswarm-overseer
+    namespace: arguswarm

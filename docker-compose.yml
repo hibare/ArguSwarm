@@ -20,6 +20,8 @@ services:
       - external
     env_file:
       - .env
+    environment:
+      - ARGUSWARM_PROVIDER=docker-swarm
     deploy:
       mode: replicated
       replicas: 1
@@ -36,6 +38,7 @@ services:
     env_file:
       - .env
     environment:
+      - ARGUSWARM_PROVIDER=docker-swarm
       - NODE_ID={{.Node.Hostname}}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
