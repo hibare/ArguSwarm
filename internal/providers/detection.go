@@ -10,6 +10,15 @@ import (
 
 // DetectProviderType detects the current orchestration platform.
 func DetectProviderType() ProviderType {
+	// Check for explicit provider configuration
+	providerEnv := strings.ToLower(config.Current.Provider.Type)
+	switch providerEnv {
+	case "kubernetes", "k8s":
+		return ProviderKubernetes
+	case "docker-swarm", "swarm":
+		return ProviderDockerSwarm
+	}
+
 	// Check for Kubernetes environment variables
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
 		return ProviderKubernetes
@@ -22,15 +31,6 @@ func DetectProviderType() ProviderType {
 
 	// Check if we're running in a container with swarm labels
 	if os.Getenv("DOCKER_SWARM_LABELS") != "" {
-		return ProviderDockerSwarm
-	}
-
-	// Check for explicit provider configuration
-	providerEnv := strings.ToLower(config.Current.Provider.Type)
-	switch providerEnv {
-	case "kubernetes", "k8s":
-		return ProviderKubernetes
-	case "docker-swarm", "swarm":
 		return ProviderDockerSwarm
 	}
 
