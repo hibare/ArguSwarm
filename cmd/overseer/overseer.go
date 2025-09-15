@@ -148,7 +148,7 @@ func (o *Overseer) Start() error {
 		IdleTimeout:  config.Current.Server.IdleTimeout,
 	}
 
-	slog.InfoContext(ctx, "Overseer started", "address", srvAddr)
+	slog.InfoContext(ctx, "Overseer started", "address", srvAddr, "provider", o.provider.GetType())
 
 	// Run server in a goroutine
 	errChan := make(chan error, 1)
