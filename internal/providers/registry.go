@@ -4,6 +4,8 @@ package providers
 import (
 	"fmt"
 
+	"github.com/hibare/ArguSwarm/internal/providers/dockerswarm"
+	"github.com/hibare/ArguSwarm/internal/providers/kubernetes"
 	"github.com/hibare/ArguSwarm/internal/providers/types"
 )
 
@@ -29,7 +31,21 @@ func (r *ProviderRegistry) Register(providerType types.ProviderType, constructor
 	r.registry[providerType] = constructor
 }
 
+// List returns a list of registered provider types.
+func (r *ProviderRegistry) List() []types.ProviderType {
+	providers := make([]types.ProviderType, 0, len(r.registry))
+	for providerType := range r.registry {
+		providers = append(providers, providerType)
+	}
+	return providers
+}
+
 // Registry is the global Registry instance.
 var Registry = ProviderRegistry{
 	registry: make(map[types.ProviderType]ProviderConstructor),
+}
+
+func init() {
+	Registry.Register(types.ProviderDockerSwarm, dockerswarm.NewProvider)
+	Registry.Register(types.ProviderKubernetes, kubernetes.NewProvider)
 }

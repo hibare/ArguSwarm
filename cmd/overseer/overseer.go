@@ -121,6 +121,14 @@ func (o *Overseer) Start() error {
 			r.Get("/volumes", o.handleVolumes)
 			r.With(httpin.NewInput(containerHealthyInput{})).Get("/container/{name}/healthy", o.handleContainerHealth)
 		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(func(next http.Handler) http.Handler {
+				return commonMiddleware.TokenAuth(next, config.Current.Overseer.AuthTokens)
+			})
+
+			r.Get("/providers", o.handleListProviders)
+		})
 	})
 
 	srvAddr := fmt.Sprintf(":%d", constants.DefaultOverseerPort)
@@ -132,6 +140,7 @@ func (o *Overseer) Start() error {
 		IdleTimeout:  config.Current.Server.IdleTimeout,
 	}
 
+	slog.InfoContext(ctx, "Registered providers", "providers", providers.Registry.List())
 	slog.InfoContext(ctx, "Overseer started", "address", srvAddr, "provider", o.provider.GetType())
 
 	// Run server in a goroutine
@@ -266,4 +275,9 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (o *Overseer) handleListProviders(w http.ResponseWriter, r *http.Request) {
+	providers := providers.Registry.List()
+	commonHttp.WriteJsonResponse(w, http.StatusOK, providers)
 }
