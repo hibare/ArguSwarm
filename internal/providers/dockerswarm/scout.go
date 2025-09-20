@@ -11,7 +11,9 @@ import (
 	networkType "github.com/docker/docker/api/types/network"
 	volumeType "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/hibare/ArguSwarm/internal/providers"
+	"github.com/hibare/ArguSwarm/internal/node"
+	"github.com/hibare/ArguSwarm/internal/providers/errors"
+	"github.com/hibare/ArguSwarm/internal/providers/types"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 )
 
@@ -30,24 +32,24 @@ func NewScoutAgent() (*ScoutAgent, error) {
 
 	return &ScoutAgent{
 		dockerClient: cli,
-		nodeID:       "docker-swarm-node", // This should be set from environment
+		nodeID:       node.GetNodeID(),
 	}, nil
 }
 
 // GetContainers returns container information from the local Docker daemon.
-func (s *ScoutAgent) GetContainers(ctx context.Context) ([]providers.ContainerInfo, error) {
+func (s *ScoutAgent) GetContainers(ctx context.Context) ([]types.ContainerInfo, error) {
 	containers, err := s.dockerClient.ContainerList(ctx, containerType.ListOptions{})
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to list containers", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
-	result := make([]providers.ContainerInfo, 0, len(containers))
+	result := make([]types.ContainerInfo, 0, len(containers))
 	for _, container := range containers {
 		// Convert ports
-		ports := make([]providers.PortInfo, 0, len(container.Ports))
+		ports := make([]types.PortInfo, 0, len(container.Ports))
 		for _, port := range container.Ports {
-			ports = append(ports, providers.PortInfo{
+			ports = append(ports, types.PortInfo{
 				IP:          port.IP,
 				PrivatePort: int(port.PrivatePort),
 				PublicPort:  int(port.PublicPort),
@@ -55,7 +57,7 @@ func (s *ScoutAgent) GetContainers(ctx context.Context) ([]providers.ContainerIn
 			})
 		}
 
-		result = append(result, providers.ContainerInfo{
+		result = append(result, types.ContainerInfo{
 			ID:      container.ID,
 			Names:   container.Names,
 			Image:   container.Image,
@@ -72,16 +74,16 @@ func (s *ScoutAgent) GetContainers(ctx context.Context) ([]providers.ContainerIn
 }
 
 // GetImages returns image information from the local Docker daemon.
-func (s *ScoutAgent) GetImages(ctx context.Context) ([]providers.ImageInfo, error) {
+func (s *ScoutAgent) GetImages(ctx context.Context) ([]types.ImageInfo, error) {
 	images, err := s.dockerClient.ImageList(ctx, imageType.ListOptions{})
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to list images", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
-	result := make([]providers.ImageInfo, 0, len(images))
+	result := make([]types.ImageInfo, 0, len(images))
 	for _, image := range images {
-		result = append(result, providers.ImageInfo{
+		result = append(result, types.ImageInfo{
 			ID:          image.ID,
 			ParentID:    image.ParentID,
 			RepoTags:    image.RepoTags,
@@ -96,32 +98,32 @@ func (s *ScoutAgent) GetImages(ctx context.Context) ([]providers.ImageInfo, erro
 }
 
 // GetNetworks returns network information from the local Docker daemon.
-func (s *ScoutAgent) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, error) {
+func (s *ScoutAgent) GetNetworks(ctx context.Context) ([]types.NetworkInfo, error) {
 	networks, err := s.dockerClient.NetworkList(ctx, networkType.ListOptions{})
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to list networks", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
-	result := make([]providers.NetworkInfo, 0, len(networks))
+	result := make([]types.NetworkInfo, 0, len(networks))
 	for _, network := range networks {
 		// Convert IPAM config
-		var ipam *providers.IPAMInfo
+		var ipam *types.IPAMInfo
 		if network.IPAM.Driver != "" || len(network.IPAM.Config) > 0 {
-			configs := make([]providers.IPAMConfig, 0, len(network.IPAM.Config))
+			configs := make([]types.IPAMConfig, 0, len(network.IPAM.Config))
 			for _, config := range network.IPAM.Config {
-				configs = append(configs, providers.IPAMConfig{
+				configs = append(configs, types.IPAMConfig{
 					Subnet:  config.Subnet,
 					Gateway: config.Gateway,
 				})
 			}
-			ipam = &providers.IPAMInfo{
+			ipam = &types.IPAMInfo{
 				Driver: network.IPAM.Driver,
 				Config: configs,
 			}
 		}
 
-		result = append(result, providers.NetworkInfo{
+		result = append(result, types.NetworkInfo{
 			Name:       network.Name,
 			ID:         network.ID,
 			Created:    network.Created.Format("2006-01-02T15:04:05Z07:00"),
@@ -137,16 +139,16 @@ func (s *ScoutAgent) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, 
 }
 
 // GetVolumes returns volume information from the local Docker daemon.
-func (s *ScoutAgent) GetVolumes(ctx context.Context) ([]providers.VolumeInfo, error) {
+func (s *ScoutAgent) GetVolumes(ctx context.Context) ([]types.VolumeInfo, error) {
 	volumes, err := s.dockerClient.VolumeList(ctx, volumeType.ListOptions{})
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to list volumes", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
-	result := make([]providers.VolumeInfo, 0, len(volumes.Volumes))
+	result := make([]types.VolumeInfo, 0, len(volumes.Volumes))
 	for _, volume := range volumes.Volumes {
-		result = append(result, providers.VolumeInfo{
+		result = append(result, types.VolumeInfo{
 			Name:       volume.Name,
 			Driver:     volume.Driver,
 			Mountpoint: volume.Mountpoint,
