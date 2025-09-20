@@ -15,7 +15,8 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/hibare/ArguSwarm/internal/config"
-	"github.com/hibare/ArguSwarm/internal/providers"
+	"github.com/hibare/ArguSwarm/internal/providers/errors"
+	"github.com/hibare/ArguSwarm/internal/providers/types"
 	commonConcurrency "github.com/hibare/GoCommon/v2/pkg/concurrency"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
@@ -29,34 +30,34 @@ const (
 	ContainerStateHealthy = "healthy"
 )
 
-// Provider implements the providers.Provider interface for Docker Swarm.
+// Provider implements the types.Provider interface for Docker Swarm.
 type Provider struct {
 	httpClient *http.Client
 }
 
 // NewProvider creates a new Docker Swarm provider instance.
-func NewProvider() (providers.Provider, error) {
+func NewProvider() (types.ProviderIface, error) {
 	return &Provider{
 		httpClient: &http.Client{Timeout: config.Current.HTTPClient.Timeout},
 	}, nil
 }
 
 // GetType returns the provider type.
-func (p *Provider) GetType() providers.ProviderType {
-	return providers.ProviderDockerSwarm
+func (p *Provider) GetType() types.ProviderType {
+	return types.ProviderDockerSwarm
 }
 
 // GetScouts returns a list of available scouts in the Docker Swarm.
-func (p *Provider) GetScouts(ctx context.Context) ([]providers.ScoutInfo, error) {
+func (p *Provider) GetScouts(ctx context.Context) ([]types.ScoutInfo, error) {
 	resolver := &net.Resolver{}
 	ips, err := resolver.LookupIPAddr(ctx, "tasks.scout")
 	if err != nil {
 		return nil, err
 	}
 
-	scouts := make([]providers.ScoutInfo, len(ips))
+	scouts := make([]types.ScoutInfo, len(ips))
 	for i, ipAddr := range ips {
-		scouts[i] = providers.ScoutInfo{
+		scouts[i] = types.ScoutInfo{
 			NodeID:  ipAddr.IP.String(),
 			Address: ipAddr.IP.String(),
 			Status:  "active",
@@ -68,13 +69,13 @@ func (p *Provider) GetScouts(ctx context.Context) ([]providers.ScoutInfo, error)
 }
 
 // GetContainers returns container information from all scouts.
-func (p *Provider) GetContainers(ctx context.Context) ([]providers.ContainerInfo, error) {
+func (p *Provider) GetContainers(ctx context.Context) ([]types.ContainerInfo, error) {
 	results, err := p.queryScouts(ctx, "containers")
 	if err != nil {
 		return nil, err
 	}
 
-	containers := make([]providers.ContainerInfo, 0, len(results))
+	containers := make([]types.ContainerInfo, 0, len(results))
 	for _, raw := range results {
 		// Convert map to JSON and then to container.Summary struct
 		jsonData, jsonErr := json.Marshal(raw)
@@ -90,7 +91,7 @@ func (p *Provider) GetContainers(ctx context.Context) ([]providers.ContainerInfo
 		}
 
 		// Convert to our provider format
-		containerInfo := providers.ContainerInfo{
+		containerInfo := types.ContainerInfo{
 			ID:      containerSummary.ID,
 			Names:   containerSummary.Names,
 			Image:   containerSummary.Image,
@@ -102,7 +103,7 @@ func (p *Provider) GetContainers(ctx context.Context) ([]providers.ContainerInfo
 
 		// Convert ports
 		for _, port := range containerSummary.Ports {
-			containerInfo.Ports = append(containerInfo.Ports, providers.PortInfo{
+			containerInfo.Ports = append(containerInfo.Ports, types.PortInfo{
 				IP:          port.IP,
 				PrivatePort: int(port.PrivatePort),
 				PublicPort:  int(port.PublicPort),
@@ -117,13 +118,13 @@ func (p *Provider) GetContainers(ctx context.Context) ([]providers.ContainerInfo
 }
 
 // GetImages returns image information from all scouts.
-func (p *Provider) GetImages(ctx context.Context) ([]providers.ImageInfo, error) {
+func (p *Provider) GetImages(ctx context.Context) ([]types.ImageInfo, error) {
 	results, err := p.queryScouts(ctx, "images")
 	if err != nil {
 		return nil, err
 	}
 
-	images := make([]providers.ImageInfo, 0, len(results))
+	images := make([]types.ImageInfo, 0, len(results))
 	for _, raw := range results {
 		jsonData, jsonErr := json.Marshal(raw)
 		if jsonErr != nil {
@@ -146,7 +147,7 @@ func (p *Provider) GetImages(ctx context.Context) ([]providers.ImageInfo, error)
 			continue
 		}
 
-		images = append(images, providers.ImageInfo{
+		images = append(images, types.ImageInfo{
 			ID:          imageSummary.ID,
 			ParentID:    imageSummary.ParentID,
 			RepoTags:    imageSummary.RepoTags,
@@ -161,13 +162,13 @@ func (p *Provider) GetImages(ctx context.Context) ([]providers.ImageInfo, error)
 }
 
 // GetNetworks returns network information from all scouts.
-func (p *Provider) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, error) {
+func (p *Provider) GetNetworks(ctx context.Context) ([]types.NetworkInfo, error) {
 	results, err := p.queryScouts(ctx, "networks")
 	if err != nil {
 		return nil, err
 	}
 
-	networks := make([]providers.NetworkInfo, 0, len(results))
+	networks := make([]types.NetworkInfo, 0, len(results))
 	for _, raw := range results {
 		jsonData, jsonErr := json.Marshal(raw)
 		if jsonErr != nil {
@@ -176,14 +177,14 @@ func (p *Provider) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, er
 		}
 
 		var networkSummary struct {
-			Name       string              `json:"Name"`
-			ID         string              `json:"Id"`
-			Created    string              `json:"Created"`
-			Scope      string              `json:"Scope"`
-			Driver     string              `json:"Driver"`
-			EnableIPv6 bool                `json:"EnableIPv6"`
-			IPAM       *providers.IPAMInfo `json:"IPAM"`
-			Labels     map[string]string   `json:"Labels"`
+			Name       string            `json:"Name"`
+			ID         string            `json:"Id"`
+			Created    string            `json:"Created"`
+			Scope      string            `json:"Scope"`
+			Driver     string            `json:"Driver"`
+			EnableIPv6 bool              `json:"EnableIPv6"`
+			IPAM       *types.IPAMInfo   `json:"IPAM"`
+			Labels     map[string]string `json:"Labels"`
 		}
 
 		if unmarshalErr := json.Unmarshal(jsonData, &networkSummary); unmarshalErr != nil {
@@ -191,7 +192,7 @@ func (p *Provider) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, er
 			continue
 		}
 
-		networks = append(networks, providers.NetworkInfo{
+		networks = append(networks, types.NetworkInfo{
 			Name:       networkSummary.Name,
 			ID:         networkSummary.ID,
 			Created:    networkSummary.Created,
@@ -207,13 +208,13 @@ func (p *Provider) GetNetworks(ctx context.Context) ([]providers.NetworkInfo, er
 }
 
 // GetVolumes returns volume information from all scouts.
-func (p *Provider) GetVolumes(ctx context.Context) ([]providers.VolumeInfo, error) {
+func (p *Provider) GetVolumes(ctx context.Context) ([]types.VolumeInfo, error) {
 	results, err := p.queryScouts(ctx, "volumes")
 	if err != nil {
 		return nil, err
 	}
 
-	volumes := make([]providers.VolumeInfo, 0, len(results))
+	volumes := make([]types.VolumeInfo, 0, len(results))
 	for _, raw := range results {
 		jsonData, jsonErr := json.Marshal(raw)
 		if jsonErr != nil {
@@ -234,7 +235,7 @@ func (p *Provider) GetVolumes(ctx context.Context) ([]providers.VolumeInfo, erro
 			continue
 		}
 
-		volumes = append(volumes, providers.VolumeInfo{
+		volumes = append(volumes, types.VolumeInfo{
 			Name:       volumeSummary.Name,
 			Driver:     volumeSummary.Driver,
 			Mountpoint: volumeSummary.Mountpoint,
@@ -353,7 +354,7 @@ func (p *Provider) fetchResource(ctx context.Context, scoutIP string, resourceTy
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to create request", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
 	req.Header.Set(commonMiddleware.AuthHeaderName, config.Current.Server.SharedSecret)
@@ -362,7 +363,7 @@ func (p *Provider) fetchResource(ctx context.Context, scoutIP string, resourceTy
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to fetch resource", "error", err)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -372,13 +373,13 @@ func (p *Provider) fetchResource(ctx context.Context, scoutIP string, resourceTy
 
 	if resp.StatusCode != http.StatusOK {
 		slog.ErrorContext(ctx, "Unexpected status code", "status", resp.StatusCode)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
 	var result []any
 	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
 		slog.ErrorContext(ctx, "Failed to decode response", "error", decodeErr)
-		return nil, providers.ErrScoutUnavailable
+		return nil, errors.ErrScoutUnavailable
 	}
 
 	return result, nil

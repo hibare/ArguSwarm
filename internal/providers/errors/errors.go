@@ -1,5 +1,5 @@
-// Package providers defines error types for the providers package.
-package providers
+// Package errors defines error types for the providers package.
+package errors
 
 import "errors"
 

@@ -15,13 +15,14 @@ import (
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
 	"github.com/hibare/ArguSwarm/internal/providers"
 	dockerSwarm "github.com/hibare/ArguSwarm/internal/providers/dockerswarm"
+	"github.com/hibare/ArguSwarm/internal/providers/types"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
 
 // Agent represents a network scout agent.
 type Agent struct {
 	scoutAgent interface{}
-	provider   providers.ProviderType
+	provider   types.ProviderType
 }
 
 // NewAgent creates a new Agent instance for Docker Swarm only.
@@ -29,7 +30,7 @@ func NewAgent() (*Agent, error) {
 	providerType := providers.DetectProviderType()
 
 	// Scouts are only needed for Docker Swarm
-	if providerType != providers.ProviderDockerSwarm {
+	if providerType != types.ProviderDockerSwarm {
 		return nil, fmt.Errorf("scouts are only needed for Docker Swarm, detected provider: %s", providerType)
 	}
 

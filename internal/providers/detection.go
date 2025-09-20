@@ -6,52 +6,41 @@ import (
 	"strings"
 
 	"github.com/hibare/ArguSwarm/internal/config"
+	"github.com/hibare/ArguSwarm/internal/providers/types"
 )
 
 // DetectProviderType detects the current orchestration platform.
-func DetectProviderType() ProviderType {
-	// Check for explicit provider configuration
-	providerEnv := strings.ToLower(config.Current.Provider.Type)
-	switch providerEnv {
-	case "kubernetes", "k8s":
-		return ProviderKubernetes
-	case "docker-swarm", "swarm":
-		return ProviderDockerSwarm
-	}
-
+func DetectProviderType() types.ProviderType {
 	// Check for Kubernetes environment variables
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-		return ProviderKubernetes
+		return types.ProviderKubernetes
 	}
 
 	// Check for Docker Swarm environment variables
 	if os.Getenv("DOCKER_SWARM_MODE") == "1" || os.Getenv("SWARM_MODE") == "1" {
-		return ProviderDockerSwarm
+		return types.ProviderDockerSwarm
 	}
 
 	// Check if we're running in a container with swarm labels
 	if os.Getenv("DOCKER_SWARM_LABELS") != "" {
-		return ProviderDockerSwarm
+		return types.ProviderDockerSwarm
+	}
+
+	// Check for explicit provider configuration
+	providerEnv := strings.ToLower(config.Current.Provider.Type)
+	switch providerEnv {
+	case "kubernetes", "k8s":
+		return types.ProviderKubernetes
+	case "docker-swarm", "swarm":
+		return types.ProviderDockerSwarm
 	}
 
 	// Default to Docker Swarm for backward compatibility
-	return ProviderDockerSwarm
-}
-
-// NewProviderWithType creates a new provider instance of the specified type.
-func NewProviderWithType(providerType ProviderType) (Provider, error) {
-	switch providerType {
-	case ProviderDockerSwarm:
-		return NewDockerSwarmProvider()
-	case ProviderKubernetes:
-		return NewKubernetesProvider()
-	default:
-		return nil, ErrUnsupportedProvider
-	}
+	return types.ProviderDockerSwarm
 }
 
 // NewProvider creates a new provider instance based on the detected or configured type.
-func NewProvider() (Provider, error) {
+func NewProvider() (types.ProviderIface, error) {
 	providerType := DetectProviderType()
-	return NewProviderWithType(providerType)
+	return Registry.Create(providerType)
 }

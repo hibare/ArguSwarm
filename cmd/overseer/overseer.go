@@ -19,8 +19,7 @@ import (
 	"github.com/hibare/ArguSwarm/internal/constants"
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
 	"github.com/hibare/ArguSwarm/internal/providers"
-	dockerSwarm "github.com/hibare/ArguSwarm/internal/providers/dockerswarm"
-	"github.com/hibare/ArguSwarm/internal/providers/kubernetes"
+	"github.com/hibare/ArguSwarm/internal/providers/types"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
@@ -61,27 +60,12 @@ const (
 
 // Overseer manages the health and status of scout agents.
 type Overseer struct {
-	provider providers.Provider
+	provider types.ProviderIface
 }
 
 // NewOverseer creates a new Overseer instance.
 func NewOverseer() (*Overseer, error) {
-	providerType := providers.DetectProviderType()
-
-	var (
-		provider providers.Provider
-		err      error
-	)
-
-	switch providerType {
-	case providers.ProviderDockerSwarm:
-		provider, err = dockerSwarm.NewProvider()
-	case providers.ProviderKubernetes:
-		provider, err = kubernetes.NewProvider()
-	default:
-		return nil, fmt.Errorf("unsupported provider type: %s", providerType)
-	}
-
+	provider, err := providers.NewProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider: %w", err)
 	}

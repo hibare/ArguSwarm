@@ -1,9 +1,8 @@
-// Package providers defines the interface and types for orchestration platform providers.
-package providers
+// Package types defines the interface and types for orchestration platform providers.
+package types
 
 import (
 	"context"
-	"errors"
 )
 
 // ProviderType represents the type of orchestration platform.
@@ -89,8 +88,8 @@ type ScoutInfo struct {
 	LastSeen string `json:"last_seen,omitempty"`
 }
 
-// Provider defines the interface that all orchestration providers must implement.
-type Provider interface {
+// ProviderIface defines the interface that all orchestration providers must implement.
+type ProviderIface interface {
 	// GetType returns the provider type.
 	GetType() ProviderType
 
@@ -111,14 +110,4 @@ type Provider interface {
 
 	// CheckContainerHealth checks if a container is healthy.
 	CheckContainerHealth(ctx context.Context, name string, filter string) (map[string]bool, error)
-}
-
-// ProviderFactory creates provider instances based on configuration.
-type ProviderFactory struct{}
-
-// NewProvider creates a new provider instance based on the current configuration.
-func (f *ProviderFactory) NewProvider() (Provider, error) {
-	// This will be implemented to detect the environment and return the appropriate provider
-	// For now, we'll implement this in the main provider file
-	return nil, errors.New("provider factory not implemented")
 }
