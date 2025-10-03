@@ -22,19 +22,10 @@ repos:
         language: docker_image
         types: ["dockerfile"]
         entry: ghcr.io/hadolint/hadolint hadolint
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: bf2137dcd61fa219107613e4a4103cf24540cd93 # v1.0.0-rc.2
     hooks:
       - id: go-mod-tidy
+      - id: go-test-mod
       - id: go-fmt
-      - id: go-vet
-      - id: golangci-lint
-      - id: go-build
-  - repo: local
-    hooks:
-      - id: run-go-tests
-        name: Run Go Tests
-        entry: make test
-        language: system
-        types: [go]
-        verbose: false
+      - id: golangci-lint-mod
