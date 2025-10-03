@@ -62,7 +62,7 @@ var Current *Config
 
 // Load initializes and loads the application configuration.
 func Load() {
-	env.Load()
+	_ = env.Load()
 
 	Current = &Config{
 		Overseer: OverseerConfig{
