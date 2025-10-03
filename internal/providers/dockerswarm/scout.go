@@ -168,7 +168,7 @@ func (s *ScoutAgent) HandleContainers(w http.ResponseWriter, r *http.Request) {
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, containers)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, containers)
 }
 
 // HandleImages handles the images endpoint for Docker Swarm scout.
@@ -179,7 +179,7 @@ func (s *ScoutAgent) HandleImages(w http.ResponseWriter, r *http.Request) {
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, images)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, images)
 }
 
 // HandleNetworks handles the networks endpoint for Docker Swarm scout.
@@ -190,7 +190,7 @@ func (s *ScoutAgent) HandleNetworks(w http.ResponseWriter, r *http.Request) {
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, networks)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, networks)
 }
 
 // HandleVolumes handles the volumes endpoint for Docker Swarm scout.
@@ -201,5 +201,5 @@ func (s *ScoutAgent) HandleVolumes(w http.ResponseWriter, r *http.Request) {
 		commonHttp.WriteErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	commonHttp.WriteJsonResponse(w, http.StatusOK, volumes)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, volumes)
 }

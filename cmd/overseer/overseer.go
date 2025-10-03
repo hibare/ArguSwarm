@@ -198,7 +198,7 @@ func (o *Overseer) handleListScouts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commonHttp.WriteJsonResponse(w, http.StatusOK, scouts)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, scouts)
 }
 
 func (o *Overseer) handleContainers(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +208,7 @@ func (o *Overseer) handleContainers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commonHttp.WriteJsonResponse(w, http.StatusOK, containers)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, containers)
 }
 
 func (o *Overseer) handleImages(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +218,7 @@ func (o *Overseer) handleImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commonHttp.WriteJsonResponse(w, http.StatusOK, images)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, images)
 }
 
 func (o *Overseer) handleNetworks(w http.ResponseWriter, r *http.Request) {
@@ -228,7 +228,7 @@ func (o *Overseer) handleNetworks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commonHttp.WriteJsonResponse(w, http.StatusOK, networks)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, networks)
 }
 
 func (o *Overseer) handleVolumes(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +238,7 @@ func (o *Overseer) handleVolumes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commonHttp.WriteJsonResponse(w, http.StatusOK, volumes)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, volumes)
 }
 
 func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request) {
@@ -279,5 +279,5 @@ func (o *Overseer) handleContainerHealth(w http.ResponseWriter, r *http.Request)
 
 func (o *Overseer) handleListProviders(w http.ResponseWriter, r *http.Request) {
 	providers := providers.Registry.List()
-	commonHttp.WriteJsonResponse(w, http.StatusOK, providers)
+	commonHttp.WriteJSONResponse(w, http.StatusOK, providers)
 }
