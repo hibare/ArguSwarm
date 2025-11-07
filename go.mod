@@ -3,7 +3,7 @@ module github.com/hibare/ArguSwarm
 go 1.25.1
 
 require (
-	github.com/docker/docker v28.5.1+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/ggicci/httpin v0.20.2
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-playground/validator/v10 v10.28.0
