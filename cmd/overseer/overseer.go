@@ -20,6 +20,7 @@ import (
 	"github.com/hibare/ArguSwarm/internal/middleware/security"
 	"github.com/hibare/ArguSwarm/internal/providers"
 	"github.com/hibare/ArguSwarm/internal/providers/types"
+	"github.com/hibare/ArguSwarm/internal/version"
 	commonHttp "github.com/hibare/GoCommon/v2/pkg/http"
 	commonMiddleware "github.com/hibare/GoCommon/v2/pkg/http/middleware"
 )
@@ -141,7 +142,7 @@ func (o *Overseer) Start() error {
 	}
 
 	slog.InfoContext(ctx, "Registered providers", "providers", providers.Registry.List())
-	slog.InfoContext(ctx, "Overseer started", "address", srvAddr, "provider", o.provider.GetType())
+	slog.InfoContext(ctx, "Overseer started", "version", version.CurrentVersion, "address", srvAddr, "provider", o.provider.GetType())
 
 	// Run server in a goroutine
 	errChan := make(chan error, 1)

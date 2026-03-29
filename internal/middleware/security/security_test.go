@@ -11,7 +11,7 @@ func TestBasicSecurity(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 

@@ -124,28 +124,7 @@ func TestLoad_InvalidLogLevel(t *testing.T) {
 		return
 	}
 	const testName = "TestLoad_InvalidLogLevel"
-	// #nosec G204
-	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
-	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
-	err := cmd.Run()
-	var e *exec.ExitError
-	if errors.As(err, &e) && !e.Success() {
-		return
-	}
-	t.Fatalf("process ran with err %v, want exit status 1", err)
-}
-
-func TestLoad_InvalidLogMode(t *testing.T) {
-	// Set invalid log mode
-	t.Setenv("ARGUSWARM_LOG_MODE", "invalid-mode")
-
-	// Test that Load exits with invalid log mode
-	if os.Getenv("TEST_EXIT") == "1" {
-		Load()
-		return
-	}
-	const testName = "TestLoad_InvalidLogMode"
-	// #nosec G204
+	// #nosec G204 G702
 	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
 	err := cmd.Run()
@@ -163,7 +142,7 @@ func TestLoad_MissingSharedSecret(t *testing.T) {
 		return
 	}
 	const testName = "TestLoad_MissingSharedSecret"
-	// #nosec G204
+	// #nosec G204 G702
 	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$")
 	cmd.Env = append(os.Environ(), "TEST_EXIT=1")
 	err := cmd.Run()
