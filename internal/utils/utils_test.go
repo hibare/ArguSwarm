@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,19 +27,10 @@ func TestGetRandomString(t *testing.T) {
 
 			// Verify all characters are from the charset
 			for _, c := range got {
-				assert.True(t, isInCharset(byte(c)), "GetRandomString() contains invalid character: %c", c)
+				assert.True(t, strings.ContainsRune(charset, c), "GetRandomString() contains invalid character: %c", c)
 			}
 		})
 	}
-}
-
-func isInCharset(c byte) bool {
-	for _, valid := range charset {
-		if byte(valid) == c {
-			return true
-		}
-	}
-	return false
 }
 
 func TestParallelExecute(t *testing.T) {
@@ -53,7 +45,9 @@ func TestParallelExecute(t *testing.T) {
 			name:  "successful execution",
 			items: []int{1, 2, 3},
 			worker: func(i int) (string, error) {
-				return string(rune('a' + i)), nil
+				// #nosec G115
+				b := byte(i)
+				return string([]byte{'a' + b}), nil
 			},
 			want:    []string{"b", "c", "d"},
 			wantErr: nil,
@@ -65,7 +59,9 @@ func TestParallelExecute(t *testing.T) {
 				if i == 2 {
 					return "", errors.New("test error")
 				}
-				return string(rune('a' + i)), nil
+				// #nosec G115
+				b := byte(i)
+				return string([]byte{'a' + b}), nil
 			},
 			want:    []string{"b", "d"},
 			wantErr: []error{errors.New("test error")},
