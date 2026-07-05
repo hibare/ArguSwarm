@@ -96,7 +96,6 @@ func (o *Overseer) Start() error {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.NoCache)
-	router.Use(middleware.RealIP)
 	router.Use(middleware.Timeout(constants.DefaultServerTimeout))
 	router.Use(middleware.StripSlashes)
 	router.Use(middleware.CleanPath)
