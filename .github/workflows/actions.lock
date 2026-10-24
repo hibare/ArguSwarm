@@ -4,7 +4,7 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/release-drafter.yml':
-        - 'release-drafter/release-drafter@v7.6.0'
+        - 'release-drafter/release-drafter@v7.10.0'
         - 'step-security/harden-runner@v2.20.0'
     '.github/workflows/test-build-publish.yml':
         - 'actions/checkout@v7.0.1'
@@ -82,9 +82,9 @@ dependencies:
             - 'docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9'
             - 'docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5'
             - 'docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3'
-    'release-drafter/release-drafter@v7.6.0':
-        ref: 'v7.6.0'
-        commit: 'sha1-eada3c96a64734dd381cfbda23511034e328ddb0'
+    'release-drafter/release-drafter@v7.10.0':
+        ref: 'v7.10.0'
+        commit: 'sha1-978bb0b30c5ee8cdd332ced253758157150d43f0'
         owner_id: 58292376
         repo_id: 139022359
     'step-security/harden-runner@v2.20.0':
