@@ -52,7 +52,7 @@ jobs:
           version: v2.15.0
 
       - name: Run pre-commit hooks
-        uses: hibare/.github/github/shared-workflows/pre-commit//@v0.12.0
+        uses: hibare/.github/github/shared-workflows/pre-commit@v0.12.0
 
   docker-image-build-publish:
     runs-on: ubuntu-latest
