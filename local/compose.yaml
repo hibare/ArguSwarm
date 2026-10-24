@@ -1,0 +1,32 @@
+services:
+  overseer:
+    image: cosmtrek/air:v1.67.4@sha256:147ccee50af42f1833ca025730307eacb05a2b90732c4e2e4401036b8d37a437
+    container_name: arguswarm-overseer
+    hostname: overseer
+    working_dir: /app
+    command: -c local/overseer.air.toml
+    env_file:
+      - .env
+    environment:
+      - ARGUSWARM_PROVIDER=docker-swarm
+    volumes:
+      - ./:/app
+    network_mode: host
+    extra_hosts:
+      - "tasks.scout:127.0.0.1"
+
+  scout:
+    image: cosmtrek/air:v1.67.4@sha256:147ccee50af42f1833ca025730307eacb05a2b90732c4e2e4401036b8d37a437
+    container_name: arguswarm-scout
+    hostname: scout
+    working_dir: /app
+    command: -c local/scout.air.toml
+    env_file:
+      - .env
+    environment:
+      - ARGUSWARM_PROVIDER=docker-swarm
+      - NODE_ID=localhost
+    volumes:
+      - ./:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host

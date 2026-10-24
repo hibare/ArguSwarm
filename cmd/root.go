@@ -8,7 +8,7 @@ import (
 	"github.com/hibare/ArguSwarm/cmd/overseer"
 	"github.com/hibare/ArguSwarm/cmd/scout"
 	"github.com/hibare/ArguSwarm/internal/config"
-	"github.com/hibare/ArguSwarm/internal/version"
+	"github.com/hibare/ArguSwarm/internal/constants"
 	commonLogger "github.com/hibare/GoCommon/v2/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 	Use:     "arguswarm",
 	Short:   "ArguSwarm is a tool for managing Docker containers",
 	Long:    ``,
-	Version: version.CurrentVersion,
+	Version: constants.Version,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

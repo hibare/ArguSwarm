@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// Version, BuildTimestamp, CommitHash are set via ldflags at build time.
+var (
+	Version        = "dev"
+	BuildTimestamp = "unknown"
+	CommitHash     = "unknown"
+)
+
 // Version information for the application.
 const (
 	// GithubOwner is the owner of the GitHub repository.

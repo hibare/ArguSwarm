@@ -29,7 +29,7 @@ install-pre-commit: ## Install pre-commit
 
 .PHONY: dev
 dev: ## Run the development server
-	docker compose -f docker-compose.dev.yml up
+	docker compose -f local/compose.yaml --project-directory . up
 
 .PHONY: test
 test: ## Run the tests
@@ -37,11 +37,11 @@ test: ## Run the tests
 
 .PHONY: build
 build: ## Build the project
-	docker build -t arguswarm . --build-arg GOLANG_VERSION=1.24.2 --build-arg VERSION=0.1.0 --progress=plain --no-cache
+	docker build -t arguswarm . --build-arg GOLANG_VERSION=1.27.3 --build-arg VERSION=0.1.0 --progress=plain --no-cache
 
 .PHONY: clean
 clean: ## Clean up the development server
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f local/compose.yaml --project-directory . down
 
 .PHONY: help
 help: ## Disply this help

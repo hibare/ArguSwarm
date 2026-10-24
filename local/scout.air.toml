@@ -3,15 +3,15 @@
 # Working directory
 # . or absolute path, please note that the directories following must be under root.
 root = "."
-tmp_dir = ".air/tmp_overseer"
+tmp_dir = "local/.air/tmp_scout"
 
 [build]
 # Just plain old shell command. You could use `make` as well.
-cmd = "GOFLAGS=-buildvcs=false go build -o .air/tmp_overseer/arguswarm ."
+cmd = "GOFLAGS=-buildvcs=false go build -o .air/tmp_scout/arguswarm ."
 # Binary file yields from `cmd`.
-bin = "tmp_overseer/arguswarm"
+bin = "tmp_scout/arguswarm"
 # Customize binary, can setup environment variables when run your app.
-full_bin = "APP_ENV=dev APP_USER=air .air/tmp_overseer/arguswarm overseer"
+full_bin = "APP_ENV=dev APP_USER=air .air/tmp_scout/arguswarm scout"
 # Watch these filename extensions.
 include_ext = ["go", "tpl", "tmpl", "html"]
 # Ignore these filename extensions or directories.

@@ -1,40 +1,78 @@
-ARG GOLANG_VERSION=1.24
+# syntax=docker/dockerfile:1.7
+
+ARG GOLANG_VERSION=1.27.3
+
 ARG VERSION=unknown
+ARG BUILD_TIMESTAMP=unknown
+ARG COMMIT_HASH=unknown
 
-FROM golang:${GOLANG_VERSION}-alpine AS base
+# =============================================================================
+# Backend
+# =============================================================================
 
-# ================== Build App ================== #
+FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine AS backend-build
 
-FROM base AS build
+ARG TARGETOS
+ARG TARGETARCH
+
+ARG VERSION
+ARG BUILD_TIMESTAMP
+ARG COMMIT_HASH
+
+WORKDIR /src
+
+# hadolint ignore=DL3064
+ENV GOFLAGS=-mod=readonly
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-WORKDIR /src/
-
-# Install healthcheck cmd
+# Build dependencies only.
 # hadolint ignore=DL3018
-RUN apk update \
-    && apk add --no-cache ca-certificates openssl \
-    && apk add curl --no-cache \
-    && apk add cosign --no-cache \
-    && rm -rf /var/cache/apk/* \
-    && update-ca-certificates \
-    && curl -sfL https://raw.githubusercontent.com/hibare/go-docker-healthcheck/main/install.sh | sh -s -- -d -v -b /usr/local/bin
+RUN apk add --no-cache \
+        ca-certificates \
+        curl \
+        git \
+    && update-ca-certificates
 
-COPY . /src/
+# Keep Go dependency resolution independently cacheable.
+COPY go.mod go.sum ./
 
-RUN go build -ldflags "-X github.com/hibare/ArguSwarm/internal/version.CurrentVersion=${VERSION}" -o arguswarm .
+RUN --mount=type=cache,id=arguswarm-go-mod-${TARGETARCH},target=/go/pkg/mod \
+    go mod download
 
-# ================== Final Image ================== #
+# Application source.
+COPY . .
 
-FROM scratch
+# Cross-compile on BUILDPLATFORM for TARGETOS/TARGETARCH.
+RUN --mount=type=cache,id=arguswarm-go-mod-${TARGETARCH},target=/go/pkg/mod \
+    --mount=type=cache,id=arguswarm-go-build-${TARGETARCH},target=/root/.cache/go-build \
+    CGO_ENABLED=0 \
+    GOOS="${TARGETOS}" \
+    GOARCH="${TARGETARCH}" \
+    go build \
+        -mod=readonly \
+        -trimpath \
+        -ldflags="-s -w \
+          -X github.com/hibare/ArguSwarm/internal/constants.Version=${VERSION} \
+          -X github.com/hibare/ArguSwarm/internal/constants.BuildTimestamp=${BUILD_TIMESTAMP} \
+          -X github.com/hibare/ArguSwarm/internal/constants.CommitHash=${COMMIT_HASH}" \
+        -o /src/arguswarm ./main.go
 
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# =============================================================================
+# Runtime
+# =============================================================================
 
-COPY --from=build /usr/local/bin/healthcheck /bin/healthcheck
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
-COPY --from=build /src/arguswarm /bin/arguswarm
+# Runtime dependencies only.
+# hadolint ignore=DL3018
+RUN apk add --no-cache \
+        ca-certificates \
+        curl \
+    && update-ca-certificates
 
-EXPOSE 5000
+COPY --from=backend-build /src/arguswarm /bin/arguswarm
 
-ENTRYPOINT [ "arguswarm" ]
+EXPOSE 8080 8081
+
+ENTRYPOINT ["/bin/arguswarm"]

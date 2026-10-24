@@ -13,7 +13,7 @@ networks:
 
 services:
   overseer:
-    image: hibare/arguswarm:next
+    image: hibare/arguswarm:latest
     command: overseer
     networks:
       - arguswarm_nw
@@ -31,7 +31,7 @@ services:
         condition: on-failure
 
   scout:
-    image: hibare/arguswarm:next
+    image: hibare/arguswarm:latest
     command: scout
     networks:
       - arguswarm_nw

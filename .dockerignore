@@ -1,0 +1,72 @@
+# Git metadata and repo-local tooling
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Build outputs and compiled binaries
+bin/
+build/
+dist/
+out/
+tmp/
+*.exe
+*.exe~
+*.dll
+*.dylib
+*.so
+*.test
+*.out
+*.prof
+*.o
+*.a
+arguswarm
+
+# Test and coverage artifacts
+coverage.txt
+coverage.html
+coverage/
+junit.xml
+test-report.xml
+*.gcda
+*.gcno
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+*.cache
+*.pid
+*.sock
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+config.yaml
+!config.example.yaml
+*.pem
+*.crt
+*.key
+*.p12
+*.pfx
+
+# Docker/runtime local state
+.volumes/
+certs/
+data/
+local/
+compose.override.yaml
+docker-compose.override.yml
+*.tar
+*.bak
+
+# Docs and editor files
+docs/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.air/

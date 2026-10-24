@@ -32,3 +32,4 @@ repos:
       - id: go-test-mod
       - id: golangci-lint-mod
         args: [--fix]
+      - id: go-build-repo-mod

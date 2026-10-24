@@ -83,7 +83,18 @@ func (s *Agent) Start() error {
 		IdleTimeout:  config.Current.Server.IdleTimeout,
 	}
 
-	slog.InfoContext(ctx, "Scout agent started", "address", srvAddr)
+	slog.InfoContext(
+		ctx,
+		"Scout agent started",
+		"version",
+		constants.Version,
+		"commit",
+		constants.CommitHash,
+		"build_time",
+		constants.BuildTimestamp,
+		"address",
+		srvAddr,
+	)
 
 	// Run our server in a goroutine so that it doesn't block.
 	errChan := make(chan error, 1)
