@@ -7,7 +7,7 @@ require (
 	github.com/ggicci/httpin v0.20.5
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-playground/validator/v10 v10.30.5
-	github.com/hibare/GoCommon/v2 v2.33.0
+	github.com/hibare/GoCommon/v2 v2.34.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	k8s.io/apimachinery v0.37.1
