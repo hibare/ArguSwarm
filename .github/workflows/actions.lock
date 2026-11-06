@@ -5,14 +5,14 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/release-drafter.yml':
         - 'release-drafter/release-drafter@v7.10.0'
-        - 'step-security/harden-runner@v2.22.2'
+        - 'step-security/harden-runner@v2.22.3'
     '.github/workflows/test-build-publish.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v7.0.0'
         - 'actions/setup-python@v7.1.0'
         - 'golangci/golangci-lint-action@v9.3.0'
-        - 'hibare/.github@v0.18.0'
-        - 'step-security/harden-runner@v2.22.2'
+        - 'hibare/.github@v0.19.0'
+        - 'step-security/harden-runner@v2.22.3'
 dependencies:
     'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9':
         ref: 'v6.1.0'
@@ -69,9 +69,9 @@ dependencies:
         commit: 'sha1-ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a'
         owner_id: 35628013
         repo_id: 232539879
-    'hibare/.github@v0.18.0':
-        ref: 'v0.18.0'
-        commit: 'sha1-d7beb850128a3af50913656d9126a8aeb9f6c427'
+    'hibare/.github@v0.19.0':
+        ref: 'v0.19.0'
+        commit: 'sha1-b8aae3d5a0c260fa954f47a505583eb1978ba0c1'
         owner_id: 20609766
         repo_id: 728721363
         uses:
@@ -87,8 +87,8 @@ dependencies:
         commit: 'sha1-978bb0b30c5ee8cdd332ced253758157150d43f0'
         owner_id: 58292376
         repo_id: 139022359
-    'step-security/harden-runner@v2.22.2':
-        ref: 'v2.22.2'
-        commit: 'sha1-dc2769abcc0fcfbadfc1df54081c1608579ef6b2'
+    'step-security/harden-runner@v2.22.3':
+        ref: 'v2.22.3'
+        commit: 'sha1-46b06cea07f9e64621fdf066ba77ac6915163d43'
         owner_id: 88700172
         repo_id: 422287306
