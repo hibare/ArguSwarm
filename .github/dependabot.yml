@@ -1,12 +1,14 @@
+# Managed by Axon; manual edits will be overwritten.
 version: 2
 updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "friday"
       time: "00:30"
+      timezone: "UTC"
     target-branch: "main"
     cooldown:
       default-days: 5
@@ -21,16 +23,16 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "friday"
       time: "00:30"
+      timezone: "UTC"
     target-branch: "main"
     cooldown:
       default-days: 5
     assignees:
       - "hibare"
     allow:
-      # Allow only direct updates for
       - dependency-type: "direct"
     groups:
       go:
@@ -39,13 +41,12 @@ updates:
 
   # Maintain version for Docker
   - package-ecosystem: "docker"
-    directories:
-      - "/"
-      - "/local"
+    directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "friday"
       time: "00:30"
+      timezone: "UTC"
     target-branch: "main"
     cooldown:
       default-days: 5
@@ -56,13 +57,34 @@ updates:
         patterns:
           - "*"
 
+  # Maintain dependencies for Docker Compose
+  - package-ecosystem: "docker-compose"
+    directories:
+      - "/"
+      - "/local"
+    schedule:
+      interval: "monthly"
+      day: "friday"
+      time: "00:30"
+      timezone: "UTC"
+    target-branch: "main"
+    cooldown:
+      default-days: 5
+    assignees:
+      - "hibare"
+    groups:
+      docker-compose:
+        patterns:
+          - "*"
+
   # Maintain dependencies for pre-commit
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "friday"
       time: "00:30"
+      timezone: "UTC"
     target-branch: "main"
     cooldown:
       default-days: 5
