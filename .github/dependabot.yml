@@ -6,7 +6,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "friday"
       time: "00:30"
       timezone: "UTC"
     target-branch: "main"
@@ -24,7 +23,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "friday"
       time: "00:30"
       timezone: "UTC"
     target-branch: "main"
@@ -44,7 +42,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "friday"
       time: "00:30"
       timezone: "UTC"
     target-branch: "main"
@@ -64,7 +61,6 @@ updates:
       - "/local"
     schedule:
       interval: "monthly"
-      day: "friday"
       time: "00:30"
       timezone: "UTC"
     target-branch: "main"
@@ -82,7 +78,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "friday"
       time: "00:30"
       timezone: "UTC"
     target-branch: "main"
